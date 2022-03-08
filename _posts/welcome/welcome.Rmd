@@ -11,10 +11,12 @@ date: 03-14-2022
 output:
   distill::distill_article:
     self_contained: false
+listing: posts
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
+
 ```
 
 

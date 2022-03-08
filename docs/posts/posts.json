@@ -13,12 +13,12 @@
     "categories": [],
     "contents": "\n\n\n\n",
     "preview": {},
-    "last_modified": "2022-03-08T13:19:17-08:00",
-    "input_file": "welcome.knit.md"
+    "last_modified": "2022-03-08T13:34:15-08:00",
+    "input_file": {}
   },
   {
-    "path": "posts/2022-03-08-rq3/",
-    "title": "rq3",
+    "path": "posts/maps/",
+    "title": "maps",
     "description": "A short description of the post.",
     "author": [
       {
@@ -30,24 +30,24 @@
     "categories": [],
     "contents": "\nDistill is a publication format for scientific and technical writing, native to the web.\nLearn more about using Distill at https://rstudio.github.io/distill.\n\n\n\n",
     "preview": {},
-    "last_modified": "2022-03-08T13:23:31-08:00",
-    "input_file": "rq3.knit.md"
+    "last_modified": "2022-03-08T13:46:07-08:00",
+    "input_file": {}
   },
   {
-    "path": "posts/2022-03-08-rq1/",
-    "title": "RQ1",
+    "path": "posts/plots/",
+    "title": "plots",
     "description": "A short description of the post.",
     "author": [
       {
-        "name": "Nora Jones",
-        "url": "https://example.com/norajones"
+        "name": "Rebecca Gordon, Ksenia Gordeeva, Amy Warnock",
+        "url": "https://rebeccagordon.github.io/edld652-finalprojectblog/"
       }
     ],
     "date": "2022-03-08",
     "categories": [],
     "contents": "\nDistill is a publication format for scientific and technical writing, native to the web.\nLearn more about using Distill at https://rstudio.github.io/distill.\n\n\n\n",
     "preview": {},
-    "last_modified": "2022-03-08T13:23:20-08:00",
-    "input_file": "rq1.knit.md"
+    "last_modified": "2022-03-08T13:45:58-08:00",
+    "input_file": {}
   }
 ]
