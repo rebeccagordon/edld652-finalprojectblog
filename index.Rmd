@@ -1,5 +1,14 @@
 ---
-title: "EDLD 652 Blog"
+title: "Posts"
 site: distill::distill_website
 listing: posts
 ---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  dev.args = list(bg = 'transparent'),
+  cache.rebuild = F,
+  cache = F
+)
+library(tidyverse)
+```

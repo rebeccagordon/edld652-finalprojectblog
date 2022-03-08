@@ -1,14 +1,13 @@
 ---
-title: "Welcome to EDLD 652 Blog"
+title: "Welcome to the USAFacts Data Visualization Blog!"
 description: |
-  Welcome to our new blog, EDLD 652 Blog. We hope you enjoy 
-  reading what we have to say!
-author:
-  - name: Nora Jones 
-    url: https://example.com/norajones
-    affiliation: Spacely Sprockets
-    affiliation_url: https://example.com/spacelysprokets
-date: 03-08-2022
+  Welcome to our new cours blog for EDLD 652 at University of Oregon, Winter 2022
+authors:
+  - name: Rebecca Gordon, Ksenia Gordeeva, Amy Warnock 
+    url: https://rebeccagordon.github.io/edld652-finalprojectblog/
+    affiliation: University of Oregon
+    affiliation_url: https://rebeccagordon.github.io/edld652-finalprojectblog/
+date: 03-14-2022
 output:
   distill::distill_article:
     self_contained: false
@@ -16,10 +15,6 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
-
-# Learn more about creating blogs with Distill at:
-# https://rstudio.github.io/distill/blog.html
-
 ```
 
 

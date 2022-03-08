@@ -4,9 +4,16 @@ description: |
   EDLD 652 Blog
 output_dir: "docs"
 navbar:
+  logo: images/rstudio.png
   right:
     - text: "Home"
       href: index.html
-    - text: "About"
-      href: about.html
+    - text: "RQ 1"
+      href: rq1.html
+    - text: "RQ 2"
+      href: rq2.html
+    - text: "RQ 3"
+      href: rq3.html
+    - icon: fa fa-rss
+      href: index.xml
 output: distill::distill_article

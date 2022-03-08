@@ -10,10 +10,17 @@
     },
     {
       "path": "index.html",
-      "title": "EDLD 652 Blog",
-      "author": [],
+      "title": "Welcome to EDLD 652 Blog",
+      "description": "Welcome to our new blog, EDLD 652 Blog. We hope you enjoy \nreading what we have to say!\n",
+      "author": [
+        {
+          "name": "Rebecca Gordon, Ksenia Gordeeva, Amy Warnock",
+          "url": "https://rebeccagordon.github.io/edld652-finalprojectblog/"
+        }
+      ],
+      "date": "03-14-2022",
       "contents": "\n\n\n\n",
-      "last_modified": "2022-03-08T12:01:04-08:00"
+      "last_modified": "2022-03-08T13:12:37-08:00"
     }
   ],
   "collections": ["posts/posts.json"]
