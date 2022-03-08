@@ -1,0 +1,20 @@
+{
+  "articles": [
+    {
+      "path": "about.html",
+      "title": "About this blog",
+      "description": "Some additional details about the blog",
+      "author": [],
+      "contents": "\n\n\n\n",
+      "last_modified": "2022-03-08T12:01:03-08:00"
+    },
+    {
+      "path": "index.html",
+      "title": "EDLD 652 Blog",
+      "author": [],
+      "contents": "\n\n\n\n",
+      "last_modified": "2022-03-08T12:01:04-08:00"
+    }
+  ],
+  "collections": ["posts/posts.json"]
+}

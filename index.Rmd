@@ -1,0 +1,5 @@
+---
+title: "EDLD 652 Blog"
+site: distill::distill_website
+listing: posts
+---
