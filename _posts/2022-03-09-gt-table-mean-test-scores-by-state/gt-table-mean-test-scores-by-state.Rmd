@@ -155,6 +155,14 @@ df_pivot$STNAM.y <- as.factor(df_pivot$STNAM.y)
 df_pivot$Subgroup <- as.factor(df_pivot$Subgroup)
 
 ```
+```{r panelset, echo=FALSE}
+xaringanExtra::use_panelset()
+```
+::::: {.panelset}
+
+::: {.panel}
+
+## Table {.panel-name}
 ```{r rebecca-table, echo=FALSE}
 min_pct <- min(df_pivot$mean_pct)
 max_pct <- max(df_pivot$mean_pct)
@@ -170,4 +178,28 @@ df_pivot %>%
                colors = pct_palette)
 
 ```
+:::
+
+::: {.panel}
+
+## Code {.panel-name}
+
+```{r rebecca-table-code, results='hide'}
+min_pct <- min(df_pivot$mean_pct)
+max_pct <- max(df_pivot$mean_pct)
+pct_palette <- col_numeric(c("#FEF0D9", "#990000"), domain = c(min_pct, max_pct), alpha = 0.75)
+
+df_pivot %>%
+  select(Subgroup, test, mean_pct, STNAM.y) %>% 
+  group_by(STNAM.y)  %>%
+  arrange(desc(mean_pct)) %>% 
+  gt() %>% 
+     cols_label(mean_pct = "Mean Percent at or above proficient") %>% 
+  data_color(columns = vars(mean_pct),
+               colors = pct_palette)
+
+```
+:::
+
+:::::
 

@@ -154,6 +154,12 @@ df_pivot$STNAM.y <- as.factor(df_pivot$STNAM.y)
 df_pivot$Subgroup <- as.factor(df_pivot$Subgroup)
 
 ```
+```{r panelset, echo=FALSE}
+xaringanExtra::use_panelset()
+```
+::::: {.panelset}
+::: {.panel}
+## Plot {.panel-name}
 
 ```{r rebecca-plots, fig.height=12, fig.width=10, echo=FALSE}
 
@@ -173,6 +179,48 @@ df_pivot %>%
   theme_minimal() 
 
 ```
+:::
+::: {.panel}
+## Prior version {.panel-name}
 
+```{r rebecca-plot-1, echo=FALSE}
 
+df_pivot %>%   
+	ggplot(aes(x = mean_pct, 
+						 y = fct_reorder(Subgroup, mean_pct))) +
+	geom_jitter(aes(color = test),
+							size = .9,
+							alpha = .8) +
+	facet_wrap(~STNAM.y) +
+	scale_color_discrete(name = "Test",
+											 labels = c("Math", "Reading")) +
+	labs(title = 'Mean percentage of students that scored at or above proficient in Math and Reading',
+			 x = 'Mean percent proficient',
+			 y = 'Group') +
+  theme_minimal() 
 
+```
+:::
+::: {.panel}
+## Code {.panel-name}
+
+```{r rebecca-plot-code, fig.show='hide'}
+
+df_pivot %>%   
+	ggplot(aes(x = mean_pct, 
+						 y = fct_reorder(Subgroup, mean_pct))) +
+	geom_jitter(aes(color = test),
+							size = .9,
+							alpha = .8) +
+	facet_wrap(~STNAM.y) +
+	scale_color_discrete(l = 70,
+											 name = "Test",
+											 labels = c("Math", "Reading")) +
+	labs(title = 'Mean percentage of students that scored at or above proficient in Math and Reading',
+			 x = 'Mean percent proficient',
+			 y = 'Group') +
+  theme_minimal() 
+
+```
+:::
+:::

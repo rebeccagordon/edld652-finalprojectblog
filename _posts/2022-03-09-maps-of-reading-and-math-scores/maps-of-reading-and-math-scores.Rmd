@@ -43,6 +43,7 @@ library(usmap)
 library(colorblindr)
 library(gt)
 library(scales)
+#devtools::install_github("gadenbuie/xaringanExtra")
 ```
 
 ```{r load-datasets, echo=FALSE}
@@ -156,7 +157,8 @@ df_pivot$STNAM.y <- as.factor(df_pivot$STNAM.y)
 df_pivot$Subgroup <- as.factor(df_pivot$Subgroup)
 
 ```
-```{r rebecca-maps, fig.height=12, fig.width=10, echo=FALSE}
+
+```{r rebecca-maps, echo=FALSE}
 #Maps
 
 us <- usa_sf()
@@ -166,7 +168,33 @@ us <- rename(us, state = iso_3166_2)
 df_geo <- inner_join(df_pivot, us, by = "state")
 
 dat2 <- full_join(df_pivot, df_geo)
-
+```
+```{r panelset, echo=FALSE}
+xaringanExtra::use_panelset()
+```
+::::: {.panelset}
+::: {.panel}
+## Reading and Math {.panel-name}
+```{r panel-chunk,  fig.height=8, fig.width=10, echo=FALSE}
+#combined map
+ggplot(data = dat2, aes(geometry = geometry, 
+												fill = mean_pct,
+												color = test), 
+			 alpha = 0.9) + 
+	facet_wrap(~Subgroup) +
+	geom_sf(color = "white", size = 0) +
+	guides(color = "none") +
+	scale_fill_viridis(name = "%",
+										 breaks = c(0, 20, 40, 60, 80)) +
+	labs(title = "Mean percentage of students that scored at or above proficient",
+			 subtitle = "Scores across Math and Reading",
+			 caption = "Source: U.S. Department of Education") +
+	theme_void()
+```
+:::
+::: {.panel}
+## Math only {.panel-name}
+```{r panel-chunk-math,  fig.height=8, fig.width=10, echo=FALSE}
 #Math only
 dat2 %>% 
 	filter(test == "math") %>% 
@@ -183,7 +211,11 @@ dat2 %>%
 			 subtitle = "Math scores only",
 			 caption = "Source: U.S. Department of Education") +
 	theme_void()
-
+```
+:::
+::: {.panel}
+## Reading only {.panel-name}
+```{r panel-chunk-reading, fig.height=8, fig.width=10, echo=FALSE}
 #Reading only
 dat2 %>% 
 	filter(test == "rla") %>% 
@@ -201,21 +233,9 @@ dat2 %>%
 			 caption = "Source: U.S. Department of Education") +
 	theme_void()
 
-#combined map
-ggplot(data = dat2, aes(geometry = geometry, 
-												fill = mean_pct,
-												color = test), 
-			 alpha = 0.9) + 
-	facet_wrap(~Subgroup) +
-	geom_sf(color = "white", size = 0) +
-	guides(color = "none") +
-	scale_fill_viridis(name = "%",
-										 breaks = c(0, 20, 40, 60, 80)) +
-	labs(title = "Mean percentage of students that scored at or above proficient",
-			 subtitle = "Scores across Math and Reading",
-			 caption = "Source: U.S. Department of Education") +
-	theme_void()
 
 
 ```
+:::
 
+:::::

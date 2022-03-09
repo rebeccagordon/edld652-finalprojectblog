@@ -117,7 +117,7 @@ code span.wa { color: #5e5e5e; font-style: italic; } /* Warning */
   <!--/radix_placeholder_rmarkdown_metadata-->
   
   <script type="text/json" id="radix-resource-manifest">
-  {"type":"character","attributes":{},"value":["geomjitter-mean-test-score-by-subgroup-and-test-by-state_files/figure-html5/rebecca-plots-1.png"]}
+  {"type":"character","attributes":{},"value":["geomjitter-mean-test-score-by-subgroup-and-test-by-state_files/anchor-4.2.2/anchor.min.js","geomjitter-mean-test-score-by-subgroup-and-test-by-state_files/bowser-1.9.3/bowser.min.js","geomjitter-mean-test-score-by-subgroup-and-test-by-state_files/distill-2.2.21/template.v2.js","geomjitter-mean-test-score-by-subgroup-and-test-by-state_files/figure-html5/rebecca-plot-1-1.png","geomjitter-mean-test-score-by-subgroup-and-test-by-state_files/figure-html5/rebecca-plot-code-1.png","geomjitter-mean-test-score-by-subgroup-and-test-by-state_files/figure-html5/rebecca-plots-1.png","geomjitter-mean-test-score-by-subgroup-and-test-by-state_files/header-attrs-2.11/header-attrs.js","geomjitter-mean-test-score-by-subgroup-and-test-by-state_files/jquery-3.6.0/jquery-3.6.0.js","geomjitter-mean-test-score-by-subgroup-and-test-by-state_files/jquery-3.6.0/jquery-3.6.0.min.js","geomjitter-mean-test-score-by-subgroup-and-test-by-state_files/jquery-3.6.0/jquery-3.6.0.min.map","geomjitter-mean-test-score-by-subgroup-and-test-by-state_files/panelset-0.2.6/panelset.css","geomjitter-mean-test-score-by-subgroup-and-test-by-state_files/panelset-0.2.6/panelset.js","geomjitter-mean-test-score-by-subgroup-and-test-by-state_files/popper-2.6.0/popper.min.js","geomjitter-mean-test-score-by-subgroup-and-test-by-state_files/tippy-6.2.7/tippy-bundle.umd.min.js","geomjitter-mean-test-score-by-subgroup-and-test-by-state_files/tippy-6.2.7/tippy-light-border.css","geomjitter-mean-test-score-by-subgroup-and-test-by-state_files/tippy-6.2.7/tippy.css","geomjitter-mean-test-score-by-subgroup-and-test-by-state_files/tippy-6.2.7/tippy.umd.min.js","geomjitter-mean-test-score-by-subgroup-and-test-by-state_files/webcomponents-2.0.0/webcomponents.js"]}
   </script>
   <!--radix_placeholder_navigation_in_header-->
   <!--/radix_placeholder_navigation_in_header-->
@@ -1439,6 +1439,8 @@ code span.wa { color: #5e5e5e; font-style: italic; } /* Warning */
 
   <!--/radix_placeholder_distill-->
   <script src="geomjitter-mean-test-score-by-subgroup-and-test-by-state_files/header-attrs-2.11/header-attrs.js"></script>
+  <link href="geomjitter-mean-test-score-by-subgroup-and-test-by-state_files/panelset-0.2.6/panelset.css" rel="stylesheet" />
+  <script src="geomjitter-mean-test-score-by-subgroup-and-test-by-state_files/panelset-0.2.6/panelset.js"></script>
   <script src="geomjitter-mean-test-score-by-subgroup-and-test-by-state_files/jquery-3.6.0/jquery-3.6.0.min.js"></script>
   <script src="geomjitter-mean-test-score-by-subgroup-and-test-by-state_files/popper-2.6.0/popper.min.js"></script>
   <link href="geomjitter-mean-test-score-by-subgroup-and-test-by-state_files/tippy-6.2.7/tippy.css" rel="stylesheet" />
@@ -1492,7 +1494,43 @@ code span.wa { color: #5e5e5e; font-style: italic; } /* Warning */
 
 </div>
 <div class="layout-chunk" data-layout="l-body">
+
+</div>
+<div class="panelset">
+<section id="plot" class="panel-name panel">
+<h2 class="panel-name">Plot</h2>
+<div class="layout-chunk" data-layout="l-body">
 <p><img src="geomjitter-mean-test-score-by-subgroup-and-test-by-state_files/figure-html5/rebecca-plots-1.png" width="960" /></p>
+</div>
+</section>
+<section id="prior-version" class="panel-name panel">
+<h2 class="panel-name">Prior version</h2>
+<div class="layout-chunk" data-layout="l-body">
+<p><img src="geomjitter-mean-test-score-by-subgroup-and-test-by-state_files/figure-html5/rebecca-plot-1-1.png" width="624" /></p>
+</div>
+</section>
+<section id="code" class="panel-name panel">
+<h2 class="panel-name">Code</h2>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span class='va'>df_pivot</span> <span class='op'><a href='https://rdrr.io/pkg/janitor/man/pipe.html'>%&gt;%</a></span>   
+  <span class='fu'><a href='https://ggplot2.tidyverse.org/reference/ggplot.html'>ggplot</a></span><span class='op'>(</span><span class='fu'><a href='https://ggplot2.tidyverse.org/reference/aes.html'>aes</a></span><span class='op'>(</span>x <span class='op'>=</span> <span class='va'>mean_pct</span>, 
+             y <span class='op'>=</span> <span class='fu'><a href='https://forcats.tidyverse.org/reference/fct_reorder.html'>fct_reorder</a></span><span class='op'>(</span><span class='va'>Subgroup</span>, <span class='va'>mean_pct</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span> <span class='op'>+</span>
+  <span class='fu'><a href='https://ggplot2.tidyverse.org/reference/geom_jitter.html'>geom_jitter</a></span><span class='op'>(</span><span class='fu'><a href='https://ggplot2.tidyverse.org/reference/aes.html'>aes</a></span><span class='op'>(</span>color <span class='op'>=</span> <span class='va'>test</span><span class='op'>)</span>,
+              size <span class='op'>=</span> <span class='fl'>.9</span>,
+              alpha <span class='op'>=</span> <span class='fl'>.8</span><span class='op'>)</span> <span class='op'>+</span>
+  <span class='fu'><a href='https://ggplot2.tidyverse.org/reference/facet_wrap.html'>facet_wrap</a></span><span class='op'>(</span><span class='op'>~</span><span class='va'>STNAM.y</span><span class='op'>)</span> <span class='op'>+</span>
+  <span class='fu'><a href='https://ggplot2.tidyverse.org/reference/scale_colour_discrete.html'>scale_color_discrete</a></span><span class='op'>(</span>l <span class='op'>=</span> <span class='fl'>70</span>,
+                       name <span class='op'>=</span> <span class='st'>"Test"</span>,
+                       labels <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='st'>"Math"</span>, <span class='st'>"Reading"</span><span class='op'>)</span><span class='op'>)</span> <span class='op'>+</span>
+  <span class='fu'><a href='https://ggplot2.tidyverse.org/reference/labs.html'>labs</a></span><span class='op'>(</span>title <span class='op'>=</span> <span class='st'>'Mean percentage of students that scored at or above proficient in Math and Reading'</span>,
+       x <span class='op'>=</span> <span class='st'>'Mean percent proficient'</span>,
+       y <span class='op'>=</span> <span class='st'>'Group'</span><span class='op'>)</span> <span class='op'>+</span>
+  <span class='fu'><a href='https://ggplot2.tidyverse.org/reference/ggtheme.html'>theme_minimal</a></span><span class='op'>(</span><span class='op'>)</span> 
+</code></pre>
+</div>
+</div>
+</section>
 </div>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r distill-force-highlighting-css"><code class="sourceCode r"></code></pre></div>
 <!--radix_placeholder_article_footer-->

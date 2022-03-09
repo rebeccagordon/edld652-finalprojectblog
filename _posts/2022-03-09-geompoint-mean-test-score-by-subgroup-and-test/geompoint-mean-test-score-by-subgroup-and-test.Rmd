@@ -155,6 +155,12 @@ df_pivot$STNAM.y <- as.factor(df_pivot$STNAM.y)
 df_pivot$Subgroup <- as.factor(df_pivot$Subgroup)
 
 ```
+```{r panelset, echo=FALSE}
+xaringanExtra::use_panelset()
+```
+::::: {.panelset}
+::: {.panel}
+## Plot {.panel-name}
 
 ```{r rebecca-plots, fig.height=20, fig.width=15, echo=FALSE}
 #Plot showing mean test score by subgroup and test
@@ -177,7 +183,54 @@ df_pivot %>%
 			 y = 'State') +
 	theme_minimal()
 ```
+:::
+::: {.panel}
+## Prior version {.panel-name}
 
+```{r rebecca-plot-prior, echo=FALSE}
+#Plot showing mean test score by subgroup and test
 
+df_pivot %>%
+	ggplot(aes(x = mean_pct,
+						 y = fct_reorder(STNAM.y, mean_pct),
+						 fill = mean_pct)) +
+	geom_point() +
+	facet_wrap(~Subgroup) +
+	guides(fill = "none") +
+	scale_color_discrete(l = 45,
+											 name = "Test",
+											 labels = c("Math", "Reading")) +
+	labs(title = 'Mean percentage of students that scored at or above proficient',
+	     caption = 'In Math and Reading',
+			 x = 'Mean percent proficient',
+			 y = 'State') +
+	theme_minimal()
+```
+:::
+::: {.panel}
+## Prior version {.panel-name}
 
+```{r rebecca-plot-code, fig.show='hide'}
+#Plot showing mean test score by subgroup and test
+
+df_pivot %>%
+	ggplot(aes(x = mean_pct,
+						 y = fct_reorder(STNAM.y, mean_pct),
+						 fill = mean_pct,
+						 color = test)) +
+	geom_point(size = .8,
+						 alpha = .7) +
+	facet_wrap(~Subgroup) +
+	guides(fill = "none") +
+	scale_color_discrete(l = 45,
+											 name = "Test",
+											 labels = c("Math", "Reading")) +
+	labs(title = 'Mean percentage of students that scored at or above proficient',
+	     caption = 'In Math and Reading',
+			 x = 'Mean percent proficient',
+			 y = 'State') +
+	theme_minimal()
+```
+:::
+:::
 

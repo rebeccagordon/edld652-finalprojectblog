@@ -154,8 +154,13 @@ df_pivot$STNAM.y <- as.factor(df_pivot$STNAM.y)
 df_pivot$Subgroup <- as.factor(df_pivot$Subgroup)
 
 ```
-
-```{r rebecca-plots, fig.height=12, fig.width=10, echo=FALSE}
+```{r panelset, echo=FALSE}
+xaringanExtra::use_panelset()
+```
+::::: {.panelset}
+::: {.panel}
+## Plot {.panel-name}
+```{r rebecca-ridges, fig.height=12, fig.width=10, echo=FALSE}
 ggplot(df_pivot, aes(x = mean_pct, 
 										 y = fct_reorder(Subgroup, mean_pct), 
 										 fill = Region,
@@ -167,4 +172,34 @@ ggplot(df_pivot, aes(x = mean_pct,
 			 x = 'Mean percent proficient',
 			 y = 'Group') 
 ```
-
+:::
+::: {.panel}
+## Prior version {.panel-name}
+```{r rebecca-ridges-prior, fig.height=12, fig.width=10, echo=FALSE}
+ggplot(df_pivot, aes(x = mean_pct, 
+										 y = fct_reorder(Subgroup, mean_pct), 
+										 fill = Region)) +
+	guides(alpha = "none") +
+	geom_density_ridges() +
+	theme_minimal() +
+	labs(title = 'Mean percentage of students that scored at or above proficient in Math and Reading',
+			 x = 'Mean percent proficient',
+			 y = 'Group') 
+```
+:::
+::: {.panel}
+## Code {.panel-name}
+```{r rebecca-ridges-code, fig.show='hide'}
+ggplot(df_pivot, aes(x = mean_pct, 
+										 y = fct_reorder(Subgroup, mean_pct), 
+										 fill = Region,
+										 alpha = .7)) +
+	guides(alpha = "none") +
+	geom_density_ridges(rel_min_height = 0.005) +
+	theme_minimal() +
+	labs(title = 'Mean percentage of students that scored at or above proficient in Math and Reading',
+			 x = 'Mean percent proficient',
+			 y = 'Group') 
+```
+:::
+::: 
