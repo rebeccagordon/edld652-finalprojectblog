@@ -1,7 +1,7 @@
 ---
 title: "Welcome to the USAFacts Data Visualization Blog!"
 description: |
-  Welcome to our new cours blog for EDLD 652 at University of Oregon, Winter 2022
+  Welcome to our course blog for EDLD 652 at University of Oregon, Winter 2022
 authors:
   - name: Rebecca Gordon, Ksenia Gordeeva, Amy Warnock 
     url: https://rebeccagordon.github.io/edld652-finalprojectblog/
@@ -14,8 +14,11 @@ output:
 listing: posts
 ---
 
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
+
+
 
 ```
 

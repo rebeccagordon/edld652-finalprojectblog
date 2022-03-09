@@ -4,12 +4,11 @@ description: |
   EDLD 652 Blog
 output_dir: "docs"
 navbar:
-  logo: images/rstudio.png
   right:
     - text: "Home"
       href: index.html
-    - text: "Maps"
-      href: maps.html
-    - text: "Plots"
-      href: plots.html
+    - icon: fa fa-github
+      href: https://github.com/rebeccagordon/edld652-finalprojectblog    
+collections:
 output: distill::distill_article
+theme: style.css
