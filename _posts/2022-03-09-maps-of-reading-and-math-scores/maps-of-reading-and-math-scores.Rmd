@@ -59,6 +59,13 @@ rlasch_10 <- get_data("EDFacts_rla_achievement_sch_2010_2019")
 
 How do high school students’ subgroup makeup (i.e., Race/ethnicity, Male vs. Female, economically disadvantaged, Limited English, Migrant status, Disability status, and Homelessness) differ among states/regions? 
 
+- Design choices: 
+	- Color-blind friendly palette
+	- faceted by subgroup
+	- removed legend for clarity
+	- Did not add state names to avoid cognitive overload
+- Findings: Homeless students have overall lower proficiency across math and reading while white students have the highest proficiency.
+
 
 ```{r rebecca-datawrangling, echo=FALSE}
 
@@ -168,6 +175,7 @@ us <- rename(us, state = iso_3166_2)
 df_geo <- inner_join(df_pivot, us, by = "state")
 
 dat2 <- full_join(df_pivot, df_geo)
+
 ```
 ```{r panelset, echo=FALSE}
 xaringanExtra::use_panelset()
@@ -234,6 +242,26 @@ dat2 %>%
 	theme_void()
 
 
+
+```
+:::
+::: {.panel}
+## Prior versions {.panel-name}
+```{r panel-chunk-prior, fig.height=8, fig.width=10, echo=FALSE}
+
+
+dat2 %>% 
+	filter(test == "math") %>% 
+	ggplot(aes(geometry = geometry, 
+						 fill = mean_pct,
+						 color = test), 
+				 alpha = 0.9) + 
+	facet_wrap(~Subgroup) +
+	geom_sf( size = 0)  +
+	labs(title = "Mean percentage of students that scored at or above proficient",
+			 subtitle = "Math scores only",
+			 caption = "Source: U.S. Department of Education") +
+	theme_void()
 
 ```
 :::

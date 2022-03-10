@@ -58,6 +58,10 @@ rlasch_10 <- get_data("EDFacts_rla_achievement_sch_2010_2019")
 
 How do high school students’ subgroup makeup (i.e., Race/ethnicity, Male vs. Female, economically disadvantaged, Limited English, Migrant status, Disability status, and Homelessness) differ among states/regions? 
 
+- Design choices: 
+	- Used a palette to show gradient in mean scores. I grouped by test and state because it shows differences better than just grouping by state. I added a black bar to show the heading so that it was very clear. I removed the grid lines because I think it is more aesthetically pleasing.
+
+
 
 ```{r rebecca-datawrangling, echo=FALSE}
 
@@ -227,12 +231,25 @@ pct_palette <- col_numeric(c("#FEF0D9", "#990000"), domain = c(min_pct, max_pct)
 
 df_pivot %>%
   select(Subgroup, test, mean_pct, STNAM.y) %>% 
-  group_by(STNAM.y)  %>%
+  group_by(STNAM.y, Subgroup)  %>%
   arrange(desc(mean_pct)) %>% 
   gt() %>% 
-     cols_label(mean_pct = "Mean Percent at or above proficient") %>% 
+  tab_style(
+    style = list(
+      cell_fill("black"),
+      cell_text(color = "white", weight = "bold")
+      ),
+    locations = cells_row_groups()
+  ) %>% 
+  tab_style(
+    style = cell_text(color = "darkgrey", weight = "bold"),
+    locations = cells_stub()
+  ) %>% 
+     cols_label(mean_pct = md("**Mean Percent at or above proficient**"), test = md("**Test by state**")) %>%
   data_color(columns = vars(mean_pct),
-               colors = pct_palette)
+               colors = pct_palette) %>% 
+  opt_table_lines("none") 
+
 
 ```
 :::

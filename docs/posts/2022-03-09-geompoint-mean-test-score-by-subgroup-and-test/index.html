@@ -118,7 +118,7 @@ code span.wa { color: #5e5e5e; font-style: italic; } /* Warning */
 <!--/radix_placeholder_rmarkdown_metadata-->
   
   <script type="text/json" id="radix-resource-manifest">
-  {"type":"character","attributes":{},"value":["geompoint-mean-test-score-by-subgroup-and-test_files/anchor-4.2.2/anchor.min.js","geompoint-mean-test-score-by-subgroup-and-test_files/bowser-1.9.3/bowser.min.js","geompoint-mean-test-score-by-subgroup-and-test_files/distill-2.2.21/template.v2.js","geompoint-mean-test-score-by-subgroup-and-test_files/figure-html5/rebecca-plot-code-1.png","geompoint-mean-test-score-by-subgroup-and-test_files/figure-html5/rebecca-plot-prior-1.png","geompoint-mean-test-score-by-subgroup-and-test_files/figure-html5/rebecca-plots-1.png","geompoint-mean-test-score-by-subgroup-and-test_files/header-attrs-2.11/header-attrs.js","geompoint-mean-test-score-by-subgroup-and-test_files/jquery-3.6.0/jquery-3.6.0.js","geompoint-mean-test-score-by-subgroup-and-test_files/jquery-3.6.0/jquery-3.6.0.min.js","geompoint-mean-test-score-by-subgroup-and-test_files/jquery-3.6.0/jquery-3.6.0.min.map","geompoint-mean-test-score-by-subgroup-and-test_files/popper-2.6.0/popper.min.js","geompoint-mean-test-score-by-subgroup-and-test_files/tippy-6.2.7/tippy-bundle.umd.min.js","geompoint-mean-test-score-by-subgroup-and-test_files/tippy-6.2.7/tippy-light-border.css","geompoint-mean-test-score-by-subgroup-and-test_files/tippy-6.2.7/tippy.css","geompoint-mean-test-score-by-subgroup-and-test_files/tippy-6.2.7/tippy.umd.min.js","geompoint-mean-test-score-by-subgroup-and-test_files/webcomponents-2.0.0/webcomponents.js"]}
+  {"type":"character","attributes":{},"value":["geompoint-mean-test-score-by-subgroup-and-test_files/anchor-4.2.2/anchor.min.js","geompoint-mean-test-score-by-subgroup-and-test_files/bowser-1.9.3/bowser.min.js","geompoint-mean-test-score-by-subgroup-and-test_files/distill-2.2.21/template.v2.js","geompoint-mean-test-score-by-subgroup-and-test_files/figure-html5/rebecca-plot-code-1.png","geompoint-mean-test-score-by-subgroup-and-test_files/figure-html5/rebecca-plot-prior-1.png","geompoint-mean-test-score-by-subgroup-and-test_files/figure-html5/rebecca-plots-1.png","geompoint-mean-test-score-by-subgroup-and-test_files/header-attrs-2.11/header-attrs.js","geompoint-mean-test-score-by-subgroup-and-test_files/jquery-3.6.0/jquery-3.6.0.js","geompoint-mean-test-score-by-subgroup-and-test_files/jquery-3.6.0/jquery-3.6.0.min.js","geompoint-mean-test-score-by-subgroup-and-test_files/jquery-3.6.0/jquery-3.6.0.min.map","geompoint-mean-test-score-by-subgroup-and-test_files/panelset-0.2.6/panelset.css","geompoint-mean-test-score-by-subgroup-and-test_files/panelset-0.2.6/panelset.js","geompoint-mean-test-score-by-subgroup-and-test_files/popper-2.6.0/popper.min.js","geompoint-mean-test-score-by-subgroup-and-test_files/tippy-6.2.7/tippy-bundle.umd.min.js","geompoint-mean-test-score-by-subgroup-and-test_files/tippy-6.2.7/tippy-light-border.css","geompoint-mean-test-score-by-subgroup-and-test_files/tippy-6.2.7/tippy.css","geompoint-mean-test-score-by-subgroup-and-test_files/tippy-6.2.7/tippy.umd.min.js","geompoint-mean-test-score-by-subgroup-and-test_files/webcomponents-2.0.0/webcomponents.js"]}
   </script>
   <!--radix_placeholder_navigation_in_header-->
 <meta name="distill:offset" content="../.."/>
@@ -2433,6 +2433,16 @@ d-appendix d-footnote-list a.footnote-backlink {
 <h4 id="rebecca">Rebecca</h4>
 <p><strong>Research Question:</strong></p>
 <p>How do high school students’ subgroup makeup (i.e., Race/ethnicity, Male vs. Female, economically disadvantaged, Limited English, Migrant status, Disability status, and Homelessness) differ among states/regions?</p>
+<ul>
+<li>Design choices:
+<ul>
+<li>Color-blind friendly</li>
+<li>faceted by subgroup</li>
+<li>Minimized size of points on the plot</li>
+<li>Expanded height and width to accommodate the data</li>
+</ul></li>
+<li>Findings: For nearly all states, homeless students scored 50% or lower in proficiency.</li>
+</ul>
 <div class="layout-chunk" data-layout="l-body">
 
 </div>
@@ -2452,8 +2462,8 @@ d-appendix d-footnote-list a.footnote-backlink {
 <p><img src="geompoint-mean-test-score-by-subgroup-and-test_files/figure-html5/rebecca-plot-prior-1.png" width="624" /></p>
 </div>
 </section>
-<section id="prior-version-1" class="panel-name panel">
-<h2 class="panel-name">Prior version</h2>
+<section id="code" class="panel-name panel">
+<h2 class="panel-name">Code</h2>
 <div class="layout-chunk" data-layout="l-body">
 <div class="sourceCode">
 <pre class="sourceCode r"><code class="sourceCode r"><span class='co'>#Plot showing mean test score by subgroup and test</span>

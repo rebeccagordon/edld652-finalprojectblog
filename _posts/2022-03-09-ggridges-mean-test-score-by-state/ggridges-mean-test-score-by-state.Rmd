@@ -57,6 +57,11 @@ rlasch_10 <- get_data("EDFacts_rla_achievement_sch_2010_2019")
 
 How do high school students’ subgroup makeup (i.e., Race/ethnicity, Male vs. Female, economically disadvantaged, Limited English, Migrant status, Disability status, and Homelessness) differ among states/regions? 
 
+- Design choices: 
+	- Color-blind friendly gradient palette
+	- My original idea was to show differences in test scores by gender (e.g. male and female). However, I decided to show all groups in one plot.
+	- Expanded height and width so that the axes are legible.
+- Findings: There are no clear regional differences. Some eastern states have highest proficiency (Virginia and Maryland) and some have lowest (Rhode Island and New Hampshire).
 
 ```{r rebecca-datawrangling, echo=FALSE}
 

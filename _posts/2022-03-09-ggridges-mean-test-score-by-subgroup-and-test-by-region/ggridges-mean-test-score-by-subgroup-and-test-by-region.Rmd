@@ -56,6 +56,9 @@ rlasch_10 <- get_data("EDFacts_rla_achievement_sch_2010_2019")
 
 How do high school students’ subgroup makeup (i.e., Race/ethnicity, Male vs. Female, economically disadvantaged, Limited English, Migrant status, Disability status, and Homelessness) differ among states/regions? 
 
+- Design choices: 
+	- Lightened the colors of the ridge lines so that they are more transparent.
+- Findings: There are no clear regional differences. However, patterns among subgroups showed that children with disabilities and English learners scored lowest in proficiency. Thus, more resources should be provided to these students so they can have greater academic success.
 
 ```{r rebecca-datawrangling, echo=FALSE}
 
