@@ -42,6 +42,7 @@ library(usmap)
 library(colorblindr)
 library(gt)
 library(scales)
+library(reactable)
 ```
 
 ```{r load-datasets, echo=FALSE}
@@ -51,7 +52,7 @@ mathsch_10 <- get_data("EDFacts_math_achievement_sch_2010_2019")
 rlasch_10 <- get_data("EDFacts_rla_achievement_sch_2010_2019")
 ```
 
-### Data Visualization 1 
+
 #### Rebecca
 **Research Question:** 
 
@@ -105,23 +106,23 @@ dat <- df2 %>%
 	group_by(STNAM) %>% 
 	summarise(
 		mean_EconomicallyDisadvantaged_math = mean(ECDmath, na.rm = TRUE),
-		mean_EconomicallyDisadvantaged_rla = mean(ECDrla, na.rm = TRUE),
+		mean_EconomicallyDisadvantaged_reading = mean(ECDrla, na.rm = TRUE),
 		mean_EnglishLearner_math = mean(LEPmath, na.rm = TRUE),
-		mean_EnglishLearner_rla = mean(LEPrla, na.rm = TRUE),
+		mean_EnglishLearner_reading = mean(LEPrla, na.rm = TRUE),
 		mean_Homeless_math = mean(HOMmath, na.rm = TRUE),
-		mean_Homeless_rla = mean(HOMrla, na.rm = TRUE),
+		mean_Homeless_reading = mean(HOMrla, na.rm = TRUE),
 		mean_Male_math = mean(Mmath, na.rm = TRUE),
-		mean_Male_rla = mean(Mrla, na.rm = TRUE),
+		mean_Male_reading = mean(Mrla, na.rm = TRUE),
 		mean_Female_math = mean(Fmath, na.rm = TRUE),
-		mean_Female_rla = mean(Frla, na.rm = TRUE),
+		mean_Female_reading = mean(Frla, na.rm = TRUE),
 		mean_Black_math = mean(MBLmath, na.rm = TRUE),
-		mean_Black_rla = mean(MBLrla, na.rm = TRUE),
+		mean_Black_reading = mean(MBLrla, na.rm = TRUE),
 		mean_Hispanic_math = mean(MHImath, na.rm = TRUE),
-		mean_Hispanic_rla = mean(MHIrla, na.rm = TRUE),
+		mean_Hispanic_reading = mean(MHIrla, na.rm = TRUE),
 		mean_White_math = mean(MWHmath, na.rm = TRUE),
-		mean_White_rla = mean(MWHrla, na.rm = TRUE),
+		mean_White_reading = mean(MWHrla, na.rm = TRUE),
 		mean_Disabled_math = mean(CWDmath, na.rm = TRUE),
-		mean_Disabled_rla = mean(CWDrla, na.rm = TRUE)
+		mean_Disabled_reading = mean(CWDrla, na.rm = TRUE)
 	) 
 
 dat <- dat %>% filter(!STNAM == "BUREAU OF INDIAN AFFAIRS" & !STNAM == "stnam" & !STNAM == "PUERTO RICO") 
@@ -163,7 +164,41 @@ xaringanExtra::use_panelset()
 ::: {.panel}
 
 ## Table {.panel-name}
+
 ```{r rebecca-table, echo=FALSE}
+min_pct <- min(df_pivot$mean_pct)
+max_pct <- max(df_pivot$mean_pct)
+pct_palette <- col_numeric(c("#FEF0D9", "#990000"), domain = c(min_pct, max_pct), alpha = 0.75)
+
+df_pivot %>%
+  select(Subgroup, test, mean_pct, STNAM.y) %>% 
+  group_by(STNAM.y, Subgroup)  %>%
+  arrange(desc(mean_pct)) %>% 
+  gt() %>% 
+  tab_style(
+    style = list(
+      cell_fill("black"),
+      cell_text(color = "white", weight = "bold")
+      ),
+    locations = cells_row_groups()
+  ) %>% 
+  tab_style(
+    style = cell_text(color = "darkgrey", weight = "bold"),
+    locations = cells_stub()
+  ) %>% 
+     cols_label(mean_pct = md("**Mean Percent at or above proficient**"), test = md("**Test by state**")) %>%
+  data_color(columns = vars(mean_pct),
+               colors = pct_palette) %>% 
+  opt_table_lines("none") 
+
+```
+
+:::
+
+::: {.panel}
+
+## Prior version {.panel-name}
+```{r rebecca-table-prior, echo=FALSE}
 min_pct <- min(df_pivot$mean_pct)
 max_pct <- max(df_pivot$mean_pct)
 pct_palette <- col_numeric(c("#FEF0D9", "#990000"), domain = c(min_pct, max_pct), alpha = 0.75)
@@ -173,11 +208,12 @@ df_pivot %>%
   group_by(STNAM.y)  %>%
   arrange(desc(mean_pct)) %>% 
   gt() %>% 
-     cols_label(mean_pct = "Mean Percent at or above proficient") %>% 
-  data_color(columns = vars(mean_pct),
+     cols_label(mean_pct = "Mean Percent at or above proficient") %>%
+	data_color(columns = vars(mean_pct),
                colors = pct_palette)
 
 ```
+
 :::
 
 ::: {.panel}
