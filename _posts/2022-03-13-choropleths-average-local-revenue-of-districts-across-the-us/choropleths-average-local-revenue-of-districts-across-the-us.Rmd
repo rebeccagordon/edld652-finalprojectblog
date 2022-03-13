@@ -1,0 +1,492 @@
+---
+title: "maps: average local revenue of districts across the US"
+description: |
+  Maps illustrating average district total local revenue and average district local reveneue from property taxes in each state.
+author:
+  - name: Amy Warnock
+date: 2022-03-13
+output:
+  distill::distill_article:
+    self_contained: false
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      eval = TRUE,
+                      message = FALSE,
+                      warning = FALSE)
+
+library(edld652)
+library(tidyverse)
+library(here)
+library(janitor)
+library(skimr)
+library(rio)
+library(viridis)
+library(albersusa)
+#install.packages("usmap")
+library(usmap)
+#install.packages("scico")
+library(scico)
+library(colorspace)
+```
+
+```{r load-data, show_col_type = FALSE}
+rlalea_10 <- get_data("EDFacts_rla_achievement_lea_2010_2019")
+
+fiscal2010 <- get_data("NCES_CCD_fiscal_district_2010")
+
+regions <- import(here("data", "us_census_bureau_regions_and_divisions.csv"), 
+									setclass = "tbl_df") %>% 
+	rename(`STNAME` = State,
+				 STABBR = `State Code`) 
+```
+
+#### Amy
+**Research Question:** 
+
+What is the average district local revenue and district revenue from property taxes in each state?  
+
+**Design choices:**
+
+-  Choropleths instead of bar graphs for communicating average district local revenue (total and from property taxes)
+-  Improved cognitive load by minimizing graph elements, such as background shading and longitude/latitude grid lines
+-  Selected a color palette composed of muted, natural colors that is also color-blind friendly
+-  Selected ordering of color palette from light to dark as it emphasized the Northeast more effectively than dark to light
+-  Customized fill color for states with missing data
+-  Clear, succinct, and polished title and labels
+	
+**Intended audience:** 
+
+Originally intended for researchers and policy makers. Upon reflection, I think these plots would be appropriate for a more general audience as well. 
+
+**Final Plots** 
+
+```{r cleaning-wrangling}
+# Selected columns of interest. Filtered so that rows with suppressed values (e.g., -9, -2) for key variables of interest weren't included. 
+
+viz3_fiscal2010 <- fiscal2010 %>% 
+  select(LEAID, NAME, STABBR, CENSUSID, V33,
+         TOTALREV, TFEDREV, TSTREV, TLOCREV, T06) %>% 
+  filter(V33 >= 0, TLOCREV >= 0, T06 >= 0) %>%
+  rename_with(tolower) %>% 
+  rename(totalstu = v33, tlocrevtaxes = t06) %>% 
+  mutate(locrev_stu = tlocrev / totalstu,
+         locrevtaxes_stu = tlocrevtaxes / totalstu)
+
+# Remove Inf values
+
+viz3_fiscal2010 <- viz3_fiscal2010 %>% 
+  mutate_if(is.numeric, list(~na_if(., Inf)))
+
+# Narrowed the RLA 2010 file down to variables of interest. Selected percent proficient variables across all grades (00) for race ethnicity, disability, English Language Learner status, and economically disadvantaged subgroups. Transformed variable names to be lowercase, transformed state names to be title case, and replaced the suppressed values (e.g., PS, n/a, etc.) with NA.
+
+viz3_rlalea00 <- rlalea_10 %>% 
+  select(YEAR, 
+         STNAM, 
+         FIPST,
+         LEAID, 
+         ALL_RLA00PCTPROF, 
+         MAM_RLA00PCTPROF,
+         MAS_RLA00PCTPROF,
+         MBL_RLA00PCTPROF,
+         MHI_RLA00PCTPROF,
+         MTR_RLA00PCTPROF, 
+         MWH_RLA00PCTPROF,
+         CWD_RLA00PCTPROF,
+         ECD_RLA00PCTPROF,
+         LEP_RLA00PCTPROF) %>% 
+  rename_with(tolower) %>% 
+  mutate(stnam = str_to_title(stnam), 
+         (across(all_rla00pctprof:lep_rla00pctprof, 
+                 ~replace(., . %in% c("PS", 
+                                      "n/a",	
+                                      "LT50",	
+                                      "LE5",	
+                                      "LE20",	
+                                      "LE10",	
+                                      "GE99",	
+                                      "GE95",	
+                                      "GE90",	
+                                      "GE80",	
+                                      "GE50"), NA))))
+
+# Next step was cleaning the percentage columns to change percentage ranges to average percentages. I used the method Daniel used on the course data webpage and applied it to all subgroups.
+
+# All = across all students
+
+viz3_rlalea00 <- viz3_rlalea00 %>% 
+  tidyr::separate(all_rla00pctprof, c("all_lower", "all_upper"), sep = "-") %>% 
+  mutate(
+    all_upper = ifelse(is.na(all_upper), all_lower, all_upper),
+    all_lower = as.numeric(all_lower),
+    all_upper = as.numeric(all_upper)
+    ) %>% 
+  rowwise() %>% 
+  mutate(meanpctprof_all = mean(c(all_lower, all_upper))) %>% 
+  ungroup()
+
+# mam = American Indian/Alaska Native
+
+viz3_rlalea00 <- viz3_rlalea00 %>% 
+  tidyr::separate(mam_rla00pctprof, c("mam_lower", "mam_upper"), sep = "-") %>% 
+  mutate(
+    mam_upper = ifelse(is.na(mam_upper), mam_lower, mam_upper),
+    mam_lower = as.numeric(mam_lower),
+    mam_upper = as.numeric(mam_upper)
+    ) %>% 
+  rowwise() %>% 
+  mutate(meanpctprof_mam = mean(c(mam_lower, mam_upper))) %>% 
+  ungroup()
+
+# mas = Asian/Pacific Islander
+
+viz3_rlalea00 <- viz3_rlalea00 %>% 
+  tidyr::separate(mas_rla00pctprof, c("mas_lower", "mas_upper"), sep = "-") %>% 
+  mutate(
+    mas_upper = ifelse(is.na(mas_upper), mas_lower, mas_upper),
+    mas_lower = as.numeric(mas_lower),
+    mas_upper = as.numeric(mas_upper)
+    ) %>% 
+  rowwise() %>% 
+  mutate(meanpctprof_mas = mean(c(mas_lower, mas_upper))) %>% 
+  ungroup()
+
+# mbl = Black
+
+viz3_rlalea00 <- viz3_rlalea00 %>% 
+  tidyr::separate(mbl_rla00pctprof, c("mbl_lower", "mbl_upper"), sep = "-") %>% 
+  mutate(
+    mbl_upper = ifelse(is.na(mbl_upper), mbl_lower, mbl_upper),
+    mbl_lower = as.numeric(mbl_lower),
+    mbl_upper = as.numeric(mbl_upper)
+    ) %>% 
+  rowwise() %>% 
+  mutate(meanpctprof_mbl = mean(c(mbl_lower, mbl_upper))) %>% 
+  ungroup()
+
+# mhi = Hispanic/Latino
+
+viz3_rlalea00 <- viz3_rlalea00 %>% 
+  tidyr::separate(mhi_rla00pctprof, c("mhi_lower", "mhi_upper"), sep = "-") %>% 
+  mutate(
+    mhi_upper = ifelse(is.na(mhi_upper), mhi_lower, mhi_upper),
+    mhi_lower = as.numeric(mhi_lower),
+    mhi_upper = as.numeric(mhi_upper)
+    ) %>% 
+  rowwise() %>% 
+  mutate(meanpctprof_mhi = mean(c(mhi_lower, mhi_upper))) %>% 
+  ungroup()
+
+# mtr = Multiracial
+
+viz3_rlalea00 <- viz3_rlalea00 %>% 
+  tidyr::separate(mtr_rla00pctprof, c("mtr_lower", "mtr_upper"), sep = "-") %>% 
+  mutate(
+    mtr_upper = ifelse(is.na(mtr_upper), mtr_lower, mtr_upper),
+    mtr_lower = as.numeric(mtr_lower),
+    mtr_upper = as.numeric(mtr_upper)
+    ) %>% 
+  rowwise() %>% 
+  mutate(meanpctprof_mtr = mean(c(mtr_lower, mtr_upper))) %>% 
+  ungroup()
+
+# mwh = White
+
+viz3_rlalea00 <- viz3_rlalea00 %>% 
+  tidyr::separate(mwh_rla00pctprof, c("mwh_lower", "mwh_upper"), sep = "-") %>% 
+  mutate(
+    mwh_upper = ifelse(is.na(mwh_upper), mwh_lower, mwh_upper),
+    mwh_lower = as.numeric(mwh_lower),
+    mwh_upper = as.numeric(mwh_upper)
+    ) %>% 
+  rowwise() %>% 
+  mutate(meanpctprof_mwh = mean(c(mwh_lower, mwh_upper))) %>% 
+  ungroup()
+
+# cwd = children with disabilities
+
+viz3_rlalea00 <- viz3_rlalea00 %>% 
+  tidyr::separate(cwd_rla00pctprof, c("cwd_lower", "cwd_upper"), sep = "-") %>% 
+  mutate(
+    cwd_upper = ifelse(is.na(cwd_upper), cwd_lower, cwd_upper),
+    cwd_lower = as.numeric(cwd_lower),
+    cwd_upper = as.numeric(cwd_upper)
+    ) %>% 
+  rowwise() %>% 
+  mutate(meanpctprof_cwd = mean(c(cwd_lower, cwd_upper))) %>% 
+  ungroup()
+
+# ecd = economically disadvantaged
+
+viz3_rlalea00 <- viz3_rlalea00 %>% 
+  tidyr::separate(ecd_rla00pctprof, c("ecd_lower", "ecd_upper"), sep = "-") %>% 
+  mutate(
+    ecd_upper = ifelse(is.na(ecd_upper), ecd_lower, ecd_upper),
+    ecd_lower = as.numeric(ecd_lower),
+    ecd_upper = as.numeric(ecd_upper)
+    ) %>% 
+  rowwise() %>% 
+  mutate(meanpctprof_ecd = mean(c(ecd_lower, ecd_upper))) %>% 
+  ungroup()
+
+# lep = limited English proficiency (English Language Learner)
+
+viz3_rlalea00 <- viz3_rlalea00 %>% 
+  tidyr::separate(lep_rla00pctprof, c("lep_lower", "lep_upper"), sep = "-") %>% 
+  mutate(
+    lep_upper = ifelse(is.na(lep_upper), lep_lower, lep_upper),
+    lep_lower = as.numeric(lep_lower),
+    lep_upper = as.numeric(lep_upper)
+    ) %>% 
+  rowwise() %>% 
+  mutate(meanpctprof_lep = mean(c(lep_lower, lep_upper))) %>% 
+  ungroup()
+
+# Got rid of the "_lower" and "_upper" percentage columns since they won't be needed
+
+viz3_rlalea00 <- viz3_rlalea00 %>% 
+  select(year, 
+         stnam, 
+         fipst,
+         leaid,
+         contains("meanpctprof"))
+
+# Pivoted the dataset longer to have a column for subgroup and a column for mean percentage proficient. 
+
+viz3_rlalea00_long <- viz3_rlalea00 %>%
+  pivot_longer(
+ 		cols = contains("meanpctprof"),
+ 		names_to = "subgroup",
+ 		values_to = "meanpctprof",
+ 		names_prefix = "meanpctprof_") 
+
+# Joined the long file with the cleaned/narrowed fiscal data file. Used an inner join because I'm only interested in LEAs that have both student proficiency and fiscal data. 
+
+viz3_rla00long_fiscal_2010 <- inner_join(viz3_rlalea00_long, 
+                                         viz3_fiscal2010, 
+                                         by = "leaid")
+
+# Merge with census data, which includes region
+
+viz3_rla00long_fiscal_2010 <- left_join(viz3_rla00long_fiscal_2010,
+                                               regions, 
+                                               by = c("stnam" = "STNAME"))
+```
+
+```{r df-prep}
+viz3_map_dfprep <- viz3_rla00long_fiscal_2010 %>% 
+  filter(subgroup == "all") %>% 
+  group_by(stnam) %>% 
+  summarize(mean_locrev_stu = mean(locrev_stu, na.rm = TRUE),
+            mean_locrevtaxes_stu = mean(locrevtaxes_stu, na.rm = TRUE))
+
+viz3_us <- usa_sf() 
+
+viz3_map_df <- left_join(viz3_us,
+                         viz3_map_dfprep,
+                         by = c("name" = "stnam"))
+```
+
+```{r panelset}
+xaringanExtra::use_panelset()
+```
+
+::: l-body-outset
+
+::::: {.panelset}
+
+::: {.panel}
+
+## Total Local Revenue {.panel-name}
+```{r panel-locrev, layout = "l-body-outset", fig.height = 10, fig.width = 10}
+viz3_map_df %>% 
+ggplot(aes(geometry = geometry, 
+           fill = mean_locrev_stu,
+           color = "transparent")) +
+  geom_sf(color = "#7d7373", size = 0.08) +
+  scale_fill_continuous_sequential(palette = "lajolla",
+                                   rev = TRUE,
+                                   na.value = "#b1aaaa",
+                                   name = "Dollar per student",
+                                   breaks = c(3000, 6000, 
+                                              9000, 12000, 15000),
+                                   labels = c("$3,000", "$6,000", "$9,000",
+                                              "$12,000", "$15,000")) + 
+  theme_void(20) +
+  labs(title = "Average District Local Revenue",
+       caption = "Source: National Center for Education Statistics, 2010") +
+  theme(plot.title.position = "plot")
+```
+:::
+
+::: {.panel}
+
+## Local Revenue from Property Taxes {.panel-name}
+```{r panel-locrevtaxes, layout = "l-body-outset", fig.height = 10, fig.width = 10}
+viz3_map_df %>% 
+  ggplot(aes(geometry = geometry, fill = mean_locrevtaxes_stu)) +
+  geom_sf(color = "#7d7373", size = 0.08) +
+  scale_fill_continuous_sequential(palette = "lajolla",
+                                   rev = TRUE,
+                                   na.value = "#b1aaaa",
+                                   name = "Dollar per student",
+                                   breaks = c(2500, 5000, 7500, 10000),
+                                   labels = c("$2,500", 
+                                              "$5,000", 
+                                              "$7,500", 
+                                              "$10,000")) + 
+  theme_void(20) +
+  labs(title = "Average District Local Revenue from Property Taxes",
+       caption = "Source: National Center for Education Statistics, 2010") +
+  theme(plot.title.position = "plot")
+```
+
+::: 
+
+:::::
+
+:::
+
+**Findings and Observations:**
+
+-  These maps use the same data as the bar plots but present the results in a different format. 
+-  Some of the regional patterns are still readily observable with the map format (higher revenue in the Northeast, lower in the South). 
+-  It is more difficult to make precise revenue comparisons between states. 
+-  What is easier to observe on the maps in comparison to the bar plots is differences between average district local revenue and local revenue from property taxes. For example, Connecticut has the highest total local revenue but one of the lowest average revenues from property taxes. 
+
+**Prior Versions** 
+
+:::l-body-outset
+
+::::: {.panelset}
+
+::: {.panel}
+
+## Prior Version 1 {.panel-name}
+
+```{r panel-prior1, layout = "l-body-outset", fig.height = 10, fig.width = 10}
+viz3_map_dfprep0 <- viz3_rla00long_fiscal_2010 %>% 
+  filter(subgroup == "all") %>% 
+  group_by(stnam) %>% 
+  summarize(mean_locrev_stu = mean(locrev_stu),
+            mean_locrevtaxes_stu = mean(locrevtaxes_stu))
+
+viz3_us <- usa_sf() 
+
+viz3_map_df0 <- left_join(viz3_map_dfprep, 
+                      viz3_us, 
+                      by = c("stnam" = "name"))
+
+viz3_map_df0 %>% 
+  ggplot(aes(geometry = geometry, fill = mean_locrev_stu)) +
+  geom_sf(color = "white", size = 0) +
+    scale_fill_viridis(option = "magma") +
+  theme_void() +
+  labs(title = "Average LEA Total Local Revenue",
+       caption = "Source: National Center for Education Statistics, 2010") +
+  theme(plot.title.position = "plot")
+```
+:::
+
+::: {.panel}
+## Prior Version 2 {.panel-name}
+```{r panel-prior2, layout = "l-body-outset", fig.height = 10, fig.width = 10}
+viz3_map_df %>% 
+  ggplot(aes(geometry = geometry, fill = mean_locrev_stu)) +
+  geom_sf(color = "white", size = 0) +
+ 	scale_fill_viridis(option = "magma", 
+ 	                   name = "Dollar per student",
+ 										 breaks = c(0, 2500, 5000, 7500, 10000, 12500),
+ 										 labels = c("$0", 
+ 										            "$2,500", 
+ 										            "$5,000", 
+ 										            "$7,500", 
+ 										            "$10,000",
+ 										            "$12,500")) +
+  theme_void() +
+  labs(title = "Average LEA Total Local Revenue",
+       caption = "Source: National Center for Education Statistics, 2010") +
+  theme(plot.title.position = "plot")
+```
+:::
+
+::: {.panel}
+## Prior Version 3 {.panel-name}
+```{r panel-prior3, layout = "l-body-outset", fig.height = 10, fig.width = 10}
+viz3_map_df %>% 
+ggplot(aes(geometry = geometry, fill = mean_locrev_stu)) +
+  geom_sf(color = "white", size = 0.08) +
+  guides(fill = guide_colorsteps(barwidth = 15,
+                                 barheight = .5,
+                                 title.position = "top",
+                                 title.hjust = .5,
+                                 title = "Dollar per Student")) +
+  scale_fill_scico(palette = "bilbao", direction = 1) + 
+  theme_void() +
+  labs(title = "Average LEA Total Local Revenue",
+       caption = "Source: National Center for Education Statistics, 2010") +
+  theme(plot.title.position = "plot",
+        legend.position = "bottom")
+```
+:::
+
+::: {.panel}
+## Prior Version 4 {.panel-name}
+```{r panel-prior4, layout = "l-body-outset", fig.height = 10, fig.width = 10}
+viz3_map_df %>% 
+ggplot(aes(geometry = geometry, 
+           fill = mean_locrev_stu,
+           color = "transparent")) +
+  geom_sf(color = "#b1aaaa", size = 0.06) +
+  scale_fill_continuous_sequential(palette = "lajolla",
+                                   rev = FALSE,
+                                   na.value = "#b1aaaa",
+                                   name = "Dollar per student",
+                                   breaks = c(3000, 6000, 
+                                              9000, 12000, 15000),
+                                   labels = c("$3,000", "$6,000", "$9,000",
+                                              "$12,000", "$15,000")) + 
+  theme_void() +
+  labs(title = "Average District Local Revenue",
+       caption = "Source: National Center for Education Statistics, 2010") +
+  theme(plot.title.position = "plot")
+```
+:::
+
+::: {.panel}
+## Prior Version 5 {.panel-name}
+```{r panel-prior5, layout = "l-body-outset", fig.height = 10, fig.width = 10}
+viz3_map_df %>% 
+ggplot(aes(geometry = geometry, 
+           fill = mean_locrev_stu,
+           color = "transparent")) +
+  geom_sf(color = "#b1aaaa", size = 0.06) +
+  scale_fill_scico(palette = 'vik',
+  								 midpoint = 6089,
+  								 name = "Dollar per student",
+  								 breaks = c(3000, 6089, 9000, 12000, 15000),
+  								 labels = c("$3,000", "$6,089 (Average)", "$9,000",
+  								 					 "$12,000", "$15,000")) + 
+  theme_void() +
+  labs(title = "Average District Local Revenue",
+       caption = "Source: National Center for Education Statistics, 2010") +
+  theme(plot.title.position = "plot")
+```
+
+:::
+
+:::::
+
+:::
+
+**Evolution of plots over time:** 
+
+As both plots are similar in regard to format and design choices and went through the same evolution, I've included the previous versions of just one plot above. 
+
+-  Prior Version 1 is my first attempt at this plot. I used the viridis magma palette. I had not yet figured out how to fill the missing states and had only made some refinements. 
+-  In Prior Version 2, I had figured out how to fill states with missing data with the default gray. I had also made initial refinements to the color legend. 
+-  Prior Version 3 shows one of my first attempts at exploring different color palettes. I like viridis magma and thought it worked well, but I wanted a more subdued color palette to be cohesive with the color palette I had chosen for the bar plots. Prior Version 3 also includes a discretzied color legend. The issue is that not all colors on the map were represented in the legend. I tried problem-solving but eventually opted to move on.
+-  Prior Version 4 includes my selection of a final color palette. I had initially thought I would use the scale as displayed (light to dark). After coming back to this project with fresh eyes, I decided to go with dark to light and to change the state borders to a darker color to distinguish states from the white background. 
+- I had also wanted to try out a divergent color scale (Prior Version 5). I think the diverging color palette is compelling but communicates a different message (most states have district local revenue near or below the national average instead of overall, states in Northeast have the highest average district local revenue).  
