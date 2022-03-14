@@ -1,0 +1,345 @@
+---
+title: "Total Spending on Education per Student"
+description: |
+  How much does each state spend total yearly per single student?
+author:
+  - name: Ksenia Gordeeva
+date: 2022-03-12
+output:
+  distill::distill_article:
+    self_contained: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      eval = TRUE,
+                      message = FALSE,
+                      warning = FALSE)
+
+
+library(edld652)
+library(tidyverse)
+library(here)
+library(janitor)
+library(skimr)
+library(rio)
+#install.packages("fuzzyjoin")
+library(fuzzyjoin)
+library(viridis)
+library(patchwork)
+library(albersusa)
+library(ggridges)
+#install.packages("biscale")
+library(biscale)
+#install.packages("cowplot")
+library(cowplot)
+library(grid)
+#install.packages("gridtext")
+library(gridtext)
+#install.packages("usmap")
+library(usmap)
+library(colorblindr)
+library(scales)
+#devtools::install_github("gadenbuie/xaringanExtra")
+```
+
+```{r load-datasets, echo=FALSE}
+fiscal2010 <- get_data("NCES_CCD_fiscal_district_2010")
+```
+
+```{r ksenia-fiscaldata, echo=FALSE}
+regions <- import(here("data", "us_census_bureau_regions_and_divisions.csv"), setclass = "tbl_df") %>% 
+  rename(`STNAME` = State,
+         STABBR = `State Code`) 
+
+# Total spendings by state
+total <-fiscal2010 %>% 
+  group_by(STNAME) %>%
+  summarise(TOTALEXP = sum(TOTALEXP),
+            V33 = sum(V33)) 
+
+total2 <- left_join(total, regions, by = "STNAME")
+
+#calculating the total spending per student
+total2 <- total2 %>% 
+  mutate(spend_per_stu = TOTALEXP/V33,
+         spend_per_stu_k = (TOTALEXP/V33)/1000)
+```
+
+**Research Question:** 
+
+How much is spent total on a single student yearly and how do these amounts vary by state?
+
+To illustrate the total expenditure per state, I decided to look at spending per single student. The raw amounts of total spending don't give us a full picture, because states vary by population size and the number of students enrolled in high schools. Thus, looking at the expenditure per single student allows for a more comparable information.  
+
+**Design choices:**
+
+* Using a color-blind friendly *OkabeIto* pallette.
+* Mapping regions to color to add the extra dimension for comparison.
+* Creating a vertical bar to show the national average of the total spending per student, which allows to easily see which states' spending is above and below average. 
+* Balancing the cognitive load by excluding unnecessary components: the title of the Y-axes, horizontal grids, embedded value of the total spending on each bar. 
+
+
+The first plot reflects the total spending per single student by state, while the second plot illustrates the total spending per single student grouped by the region: : 
+
+```{r panelset, echo=FALSE}
+xaringanExtra::use_panelset()
+```
+::::: {.panelset}
+::: {.panel}
+## Plots {.panel-name}
+
+```{r ksena-total, fig.height=10, fig.width=9, echo=FALSE}
+total2  %>%
+  ggplot(aes(spend_per_stu_k, fct_reorder(STNAME, spend_per_stu_k))) +
+  geom_col(aes(fill = Region),
+           alpha = 0.9) +
+  scale_fill_OkabeIto() + 
+  scale_x_continuous(expand = c(0, 0), 
+                     limits = c(0, 30),
+                     breaks = c(0, 5, 10, 15, 20, 25), 
+                     labels = c("0", "5K", "10K", "15K", "20K", "25K")) + 
+  labs(title = "Total Spending on Education Per Single Student by State",
+       x = "Total Yearly Spending Per Student, in USD",
+       caption = "Source: National Center for Education Statistics", 
+       fill = "Region") + 
+  geom_vline(aes(xintercept = mean(total2$spend_per_stu_k)), 
+             data = total2, 
+             linetype = 'dotted',
+             size = 0.8,
+             alpha = 1, 
+             color = "#29211F") +
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        axis.title.y = element_blank(),
+        plot.title = element_text(size = 20)) +
+  annotate(geom = "label",
+           x = mean(total2$spend_per_stu_k), 
+           y = 10, 
+           label = "US Average = 
+$ 12,977",
+           vjust = .5,
+           color = "#29211F",
+           size = 4)
+```
+#### Findings: 
+District of Columbia spent the most total on a single student (\$25,613), followed by New York (\$21,770) and Vermont (\$19,541). All Northeastern states are in the top 15 states with highest spending per student, which is reflected in the plot below demonstrating that in Northeastern states, an average spending per single students is the highest and equals \$17,194. The first plot also reveals that in every single in the Northeast regions the total spending per student exceeds the national average.
+
+The three states with the lowest spending per students are Idaho (\$7,798), Utah (\$8,040), and Arizona (\$8,999), which are all Western States. Compared to other regions, a Western state spends the least per student on average (\$11,745). It can be observed that all Western states except Wyoming and Alaska spend less on a single student that the national mean. 
+
+```{r total-region, echo=FALSE}
+
+#calculating an average spending per student by the region
+total_rg_avg_stu <- total2 %>% 
+  group_by(Region) %>% 
+  summarize(rg_avg_stu = mean(spend_per_stu_k))
+
+#plotting by region
+total_rg_avg_stu  %>%
+  ggplot(aes(rg_avg_stu, fct_reorder(Region,rg_avg_stu))) +
+  geom_col(aes(fill = Region),
+  alpha = 0.9) +
+  scale_fill_OkabeIto() + 
+  scale_x_continuous(expand = c(0, 0), 
+                     limits = c(0, 20),
+                     breaks = c(0, 5, 10, 15), 
+                     labels = c("0", "5K", "10K", "15K")) + 
+  labs(title = "Average Total Spending on Education per Student by Region",
+       y = "Region",
+       x = "Avergae Yearly Spending per Student, in USD",
+       caption = "Source: National Center for Education Statistics") + 
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank(),
+         plot.title = element_text(size = 15)) 
+```
+:::
+::: {.panel}
+## Prior version 1 {.panel-name}
+```{r ksenia-total-prior1, fig.height=8, echo=FALSE}
+total2  %>%
+  ggplot(aes(spend_per_stu_k, STNAME)) +
+  geom_col(alpha = 0.9) +
+  scale_x_continuous(expand = c(0, 0), 
+                     limits = c(0, 30),
+                     breaks = c(0, 5, 10, 15, 20, 25), 
+                     labels = c("0", "5K", "10K", "15K", "20K", "25K")) + 
+  labs(title = "Total Spending on Education Per Single Student by State",
+       y = "State",
+       y = "State",
+       x = "Total Yearly Spending Per Student, in USD",
+       caption = "Source: National Center for Education Statistics", 
+       fill = "Region") + 
+  theme_minimal()
+```
+The very first attempt to visualize how the total spending vary per state was a simple bar chart. The obvious drawbacks of this versions are the use of single color and the lack of states ordering according to the total amount spent, which makes it hard to compare how the expenditures covary both by state and across regions. 
+
+:::
+::: {.panel}
+## Prior version 2 {.panel-name}
+```{r ksenia-total-prior2, fig.height=8, echo=FALSE}
+total2  %>%
+  ggplot(aes(spend_per_stu_k, fct_reorder(STNAME, spend_per_stu_k))) +
+  geom_col(aes(fill = Region),
+           alpha = 0.9) +
+  scale_fill_OkabeIto() + 
+  scale_x_continuous(expand = c(0, 0), 
+                     limits = c(0, 30),
+                     breaks = c(0, 5, 10, 15, 20, 25), 
+                     labels = c("0", "5K", "10K", "15K", "20K", "25K")) + 
+  labs(title = "Total Spending on Education Per Single Student by State",
+       y = "State",
+       x = "Total Yearly Spending Per Student, in USD",
+       caption = "Source: National Center for Education Statistics", 
+       fill = "Region") + 
+  theme_minimal()
+```
+The next attempt introduced color for mapping according to regions. My original pallette choice was *"BrBG"*, which was my esthetic preference. However, its saturated version reveled to be not very color-blindness friendly. Thus, I opted for *OkabeIto*. 
+:::
+::: {.panel}
+## Prior version 3 {.panel-name}
+```{r ksenia-total-prior3, fig.height=8, echo=FALSE}
+total22 <- total2  %>% 
+  select(STNAME, 
+         Region,
+         spend_per_stu_k)
+new_row <- c("U.S.Average", "South",  mean(total2$spend_per_stu_k)) 
+total222 <- rbind(total22, new_row)  
+
+total222$spend_per_stu_k <- as.numeric(total222$spend_per_stu_k)
+
+states <- unique(total222$STNAME)
+label_color <- ifelse(states =="U.S.Average", 
+                "black",
+                "gray30")
+
+label_face <- ifelse(states == "U.S.Average",
+                "bold",
+                "plain")
+
+total222 <- total222  %>% 
+  mutate (STNAME = fct_reorder(STNAME, spend_per_stu_k))
+
+
+total222  %>%
+  ggplot(aes(spend_per_stu_k, fct_reorder(STNAME, spend_per_stu_k))) +
+  geom_col(aes(fill = Region),
+           alpha = 0.9) +
+  geom_col(data = filter(total222,
+                           STNAME == "U.S.Average"),
+           fill = "black") +
+  scale_fill_OkabeIto() + 
+  scale_x_continuous(expand = c(0, 0), 
+                     limits = c(0, 30),
+                     breaks = c(0, 5, 10, 15, 20, 25), 
+                     labels = c("0", "5K", "10K", "15K", "20K", "25K")) + 
+  labs(title = "Total Spending on Education Per Single Student by State",
+       x = "Total Yearly Spending Per Student, in USD",
+       caption = "Source: National Center for Education Statistics", 
+       fill = "Region") + 
+  geom_text(
+    aes(spend_per_stu_k, STNAME, label = paste (round(spend_per_stu_k, 2), " K")),
+    nudge_x = 0.45,
+    size = 2) +
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        axis.title.y = element_blank())
+```
+In the third version of the bar plot, I added a row to the data frame with the national average value of total spending per student in order to create a bar reflective the the average amount of total spending across the US. I highlighted it in black to make it stand out from the colors for regions. In the end, I made a decision to forgo this way to incorporate the national average for the vertical line. The extra horizontal bar appeared to be less effective: because the plot already has 4 colors it is harder to attend to the extra fifth color compared to the vertical line.
+
+This plot also features the addition of yearly spending amount embedded within the visual at the end of each bar. Although this addition is a neat way to demonstrate the gross amounts being spent on a single student, I opted not to include in the final plot. The main goal is relative comparison, so the additional labels on all 50 bar put unnecessary extra weight on the cognitive load. Besides, the break ticks on the x axes in combination with the vertical line, which has a national average amount labeled, make it easy to follow the exact amounts if necessary. 
+
+Finally, in this version I have cleaned up the theme, getting rid of unnecessary grids and the Y-axis title witht he purpose of further balancing off the cognitive load. 
+:::
+::: {.panel}
+## Prior version 4 {.panel-name}
+```{r ksenia-total-prior4, fig.height=8, echo=FALSE}
+total2  %>%
+  group_by(Region) %>% 
+  arrange(desc(-spend_per_stu_k), .by_group = TRUE) %>% 
+  mutate(STNAME=factor(STNAME, levels=STNAME)) %>% 
+  ggplot(aes(spend_per_stu_k, STNAME)) +
+  geom_col(aes(fill = Region),
+           alpha = 0.9) +
+  scale_fill_OkabeIto() + 
+  scale_x_continuous(expand = c(0, 0), 
+                     limits = c(0, 30),
+                     breaks = c(0, 5, 10, 15, 20, 25), 
+                     labels = c("0", "5K", "10K", "15K", "20K", "25K")) + 
+  labs(title = "Total Spending on Education Per Single Student by State",
+       x = "Total Yearly Spending Per Student, in USD",
+       caption = "Source: National Center for Education Statistics", 
+       fill = "Region") + 
+   geom_text(
+    aes(spend_per_stu_k, STNAME, label = paste (round(spend_per_stu_k, 2), " K.")),
+    nudge_x = 0.85,
+    size = 2
+  ) +
+  geom_vline(aes(xintercept = mean(total2$spend_per_stu_k)), 
+             data = total2, 
+             linetype = 'dotted',
+             size = 0.8,
+             alpha = 1, 
+             color = "gray60") +
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        axis.title.y = element_blank()) +
+  annotate(geom = "label",
+           x = mean(total222$spend_per_stu_k), 
+           y = 24, 
+           label = "US Average = 
+$ 12,977",
+           vjust = .5,
+           color = "#29211F",
+           size = 3)
+```
+And finally, I tried not just color coding the states by the regions, but arranging the state graphs on the plot by region. The result is, though very aesthetically pleasing, not extremely informative. It allows to see the biggest and lowest spenders in each regions, but it makes the relative comparison of states complicated. The patterns within the regions are rather similar: there is a state or two with spendings significantly exceeding the others, but the lowest-spending states in each region end up on approximately the same levels. One advantage of this visualization is the possibility to see how Midwestern states are more homogeneous in relation to each other compared to other regions. 
+:::
+::: {.panel}
+## Code for the final plot{.panel-name}
+
+```{r kseni-total-code, fig.show='hide'}
+
+total2  %>%
+  ggplot(aes(spend_per_stu_k, fct_reorder(STNAME, spend_per_stu_k))) +
+  geom_col(aes(fill = Region),
+           alpha = 0.9) +
+  scale_fill_OkabeIto() + 
+  scale_x_continuous(expand = c(0, 0), 
+                     limits = c(0, 30),
+                     breaks = c(0, 5, 10, 15, 20, 25), 
+                     labels = c("0", "5K", "10K", "15K", "20K", "25K")) + 
+  labs(title = "Total Spending on Education Per Single Student by State",
+       x = "Total Yearly Spending Per Student, in USD",
+       caption = "Source: National Center for Education Statistics", 
+       fill = "Region") + 
+  geom_vline(aes(xintercept = mean(total2$spend_per_stu_k)), 
+             data = total2, 
+             linetype = 'dotted',
+             size = 0.8,
+             alpha = 1, 
+             color = "#29211F") +
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        axis.title.y = element_blank(),
+        plot.title = element_text(size = 20)) +
+  annotate(geom = "label",
+           x = mean(total2$spend_per_stu_k), 
+           y = 10, 
+           label = "US Average = 
+$ 12,977",
+           vjust = .5,
+           color = "#29211F",
+           size = 4)
+```
+:::
+:::
