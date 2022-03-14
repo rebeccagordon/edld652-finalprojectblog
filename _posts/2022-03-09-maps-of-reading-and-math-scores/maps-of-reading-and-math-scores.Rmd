@@ -1,5 +1,5 @@
 ---
-title: "Maps of reading and math scores"
+title: "Maps of reading and math scores across the US states"
 description: |
   United States maps of student scores above or at proficient in reading and math
 author:
@@ -57,7 +57,7 @@ rlasch_10 <- get_data("EDFacts_rla_achievement_sch_2010_2019")
 #### Rebecca
 **Research Question:** 
 
-How do high school students’ subgroup makeup (i.e., Race/ethnicity, Male vs. Female, economically disadvantaged, Limited English, Migrant status, Disability status, and Homelessness) differ among states/regions? 
+How do high school students’ subgroup makeup (i.e., Race/ethnicity, Male vs. Female, economically disadvantaged, Limited English, Migrant status, Disability status, and Homelessness) and mean test scores in math and reading differ among states/regions? 
 
 - Design choices: 
 	- Color-blind friendly palette
@@ -65,7 +65,11 @@ How do high school students’ subgroup makeup (i.e., Race/ethnicity, Male vs. F
 	- removed legend for clarity
 	- Did not add state names to avoid cognitive overload
 - Findings: Homeless students have overall lower proficiency across math and reading while white students have the highest proficiency.
-
+- Prior versions: 
+	- I wanted the color palette to show contrast of subgroups so I used the viridis palette to show proficient test scores. 
+	- I had planned to facet by subgroup in the so that was the first design choice I made in the data wrangling phase.
+	- I added breaks to show cut-offs for percentages and re-labeled the legend
+	- I made aesthetic changes to remove state outlines
 
 ```{r rebecca-datawrangling, echo=FALSE}
 
@@ -249,6 +253,17 @@ dat2 %>%
 ## Prior versions {.panel-name}
 ```{r panel-chunk-prior, fig.height=8, fig.width=10, echo=FALSE}
 
+ggplot(data = dat2, aes(geometry = geometry, 
+												fill = mean_pct)) + 
+	facet_wrap(~Subgroup) +
+	geom_sf() +
+	guides(color = "none") +
+	scale_fill_viridis(name = "%",
+										 breaks = c(0, 20, 40, 60, 80)) +
+	labs(title = "Mean percentage of students that scored at or above proficient",
+			 subtitle = "Scores across Math and Reading",
+			 caption = "Source: U.S. Department of Education") +
+	theme_void()
 
 dat2 %>% 
 	filter(test == "math") %>% 
@@ -260,6 +275,20 @@ dat2 %>%
 	geom_sf( size = 0)  +
 	labs(title = "Mean percentage of students that scored at or above proficient",
 			 subtitle = "Math scores only",
+			 caption = "Source: U.S. Department of Education") +
+	theme_void()
+
+dat2 %>% 
+	filter(test == "rla") %>% 
+	ggplot(aes(geometry = geometry, 
+						 fill = state,
+						 color = mean_pct), 
+				 alpha = 0.9) + 
+	facet_wrap(~Subgroup) +
+	geom_sf(color = "white", size = 0) +
+	guides(fill = "none") +
+	labs(title = "Mean percentage of students that scored at or above proficient",
+			 subtitle = "Reading scores only",
 			 caption = "Source: U.S. Department of Education") +
 	theme_void()
 

@@ -1,5 +1,5 @@
 ---
-title: "ggridges: mean test score by state"
+title: "ggridges: mean test scores above or at proficent by state"
 description: |
 author:
   - name: Rebecca Gordon
@@ -62,6 +62,7 @@ How do high school students’ subgroup makeup (i.e., Race/ethnicity, Male vs. F
 	- My original idea was to show differences in test scores by gender (e.g. male and female). However, I decided to show all groups in one plot.
 	- Expanded height and width so that the axes are legible.
 - Findings: There are no clear regional differences. Some eastern states have highest proficiency (Virginia and Maryland) and some have lowest (Rhode Island and New Hampshire).
+- Prior versions: I initially wanted to show the ridge lines by state and thought that the gradient palette was very striking and visually representative of the mean proficient scores.
 
 ```{r rebecca-datawrangling, echo=FALSE}
 
@@ -182,8 +183,8 @@ df_pivot %>%
 ```
 :::
 ::: {.panel}
-## Prior version {.panel-name}
-```{r rebecca-plots-prior, echo=FALSE}
+## Prior version 1{.panel-name}
+```{r rebecca-plots-prior1, echo=FALSE}
 df_pivot %>%
 	filter(Subgroup %in% c("Male","Female")) %>% 
 	group_by(Subgroup) %>% 
@@ -191,6 +192,23 @@ df_pivot %>%
 						 y = fct_reorder(STNAM.y, mean_pct),
 						 color = Subgroup)) +
 	geom_density_ridges_gradient(scale = 2, size = 0.3, rel_min_height = 0.001) +
+	scale_fill_viridis_c(name = "%", option = "C") +
+	coord_cartesian(clip = "off") +
+	theme_ridges(grid = FALSE) +
+	labs(title = 'Mean percentage of students that scored at or above proficient',
+			 x = 'Mean percent proficient',
+			 y = 'State')
+
+```
+:::
+::: {.panel}
+## Prior version 2{.panel-name}
+```{r rebecca-plots-prior2, echo=FALSE}
+df_pivot %>%
+	ggplot(aes(x = mean_pct,
+						 y = fct_reorder(STNAM.y, mean_pct),
+						 fill = mean_pct)) +
+	geom_density_ridges(scale = 2, size = 0.3, rel_min_height = 0.001) +
 	scale_fill_viridis_c(name = "%", option = "C") +
 	coord_cartesian(clip = "off") +
 	theme_ridges(grid = FALSE) +

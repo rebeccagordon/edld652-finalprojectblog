@@ -1,7 +1,7 @@
 ---
 title: "geom_point: mean test score by subgroup and test"
 description: |
-  Mean percentage of students that scored at or above proficient
+  Mean percentage of students that scored at or above proficient in math and reading 
 author:
   - name: Rebecca Gordon
 date: 2022-03-09
@@ -55,7 +55,7 @@ rlasch_10 <- get_data("EDFacts_rla_achievement_sch_2010_2019")
 #### Rebecca
 **Research Question:** 
 
-How do high school students’ subgroup makeup (i.e., Race/ethnicity, Male vs. Female, economically disadvantaged, Limited English, Migrant status, Disability status, and Homelessness) differ among states/regions? 
+How do high school students’ subgroup makeup (i.e., Race/ethnicity, Male vs. Female, economically disadvantaged, Limited English, Migrant status, Disability status, and Homelessness) and proficient test scores in math and reading differ among states/regions? 
 
 - Design choices: 
 	- Color-blind friendly 
@@ -63,6 +63,7 @@ How do high school students’ subgroup makeup (i.e., Race/ethnicity, Male vs. F
 	- Minimized size of points on the plot
 	- Expanded height and width to accommodate the data
 - Findings: For nearly all states, homeless students scored 50% or lower in proficiency. 
+- Prior version: I initially found this plot to not be very informative. However, when I made the points smaller I noticed that there was a pattern among students by subgroup.
 
 
 
@@ -178,7 +179,7 @@ df_pivot %>%
 						 y = fct_reorder(STNAM.y, mean_pct),
 						 fill = mean_pct,
 						 color = test)) +
-	geom_point(size = .8,
+	geom_point(size = .9,
 						 alpha = .7) +
 	facet_wrap(~Subgroup) +
 	guides(fill = "none") +
@@ -201,13 +202,11 @@ df_pivot %>%
 df_pivot %>%
 	ggplot(aes(x = mean_pct,
 						 y = fct_reorder(STNAM.y, mean_pct),
-						 fill = mean_pct)) +
+						 fill = mean_pct,
+						 color = test)) +
 	geom_point() +
 	facet_wrap(~Subgroup) +
 	guides(fill = "none") +
-	scale_color_discrete(l = 45,
-											 name = "Test",
-											 labels = c("Math", "Reading")) +
 	labs(title = 'Mean percentage of students that scored at or above proficient',
 	     caption = 'In Math and Reading',
 			 x = 'Mean percent proficient',
@@ -226,7 +225,7 @@ df_pivot %>%
 						 y = fct_reorder(STNAM.y, mean_pct),
 						 fill = mean_pct,
 						 color = test)) +
-	geom_point(size = .8,
+	geom_point(size = .9,
 						 alpha = .7) +
 	facet_wrap(~Subgroup) +
 	guides(fill = "none") +

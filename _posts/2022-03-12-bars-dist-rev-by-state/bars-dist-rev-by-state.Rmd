@@ -1,7 +1,7 @@
 ---
 title: "vertical bar plots: average local revenue of districts and reading proficiency across states"
 description: |
-  Bar plots illustrating average district local revenue (total and from property taxes) and   reading/language arts proficiency of all students by state.
+  Bar plots illustrating average district local revenue (total and from property taxes) and reading/language arts proficiency of all students by state.
 author:
   - name: Amy Warnock
 date: 2022-03-13
@@ -44,7 +44,7 @@ regions <- import(here("data", "us_census_bureau_regions_and_divisions.csv"),
 #### Amy
 **Research Questions:** 
 
-What is the average district local revenue and district revenue from property taxes in each state? What is the average percentage of all students scoring at or above proficient on reading/language arts assessments in each state? 
+What is the average district local revenue and district revenue from property taxes in each state? As an add-on: What is the average percentage of all students scoring at or above proficient on reading/language arts assessments in each state? 
 
 **Design choices:**
 
@@ -52,8 +52,8 @@ What is the average district local revenue and district revenue from property ta
 -  Selected a color palette composed of muted, natural colors that is also color-blind friendly
 -  Clear, succinct, and polished title and labels
 -  Sorted bars by their value and colored by region in order to observe patterns
--  Vertical reference lines
--  For the revenue plots, I opted to make the range and breaks of the x-axis the same to improve ease of comparison.
+-  Vertical reference lines indicating the national average 
+-  For the revenue plots, making the range and breaks of the x-axis the same to allow for ease of comparison
 	
 **Intended audience:** 
 
@@ -417,10 +417,9 @@ viz3_rla00long_fiscal_2010 %>%
 
 **Findings:**
 
--  There are regional patterns of the average total local revenue and local revenue from property taxes of school districts. These patterns are similar for both types of local revenue (total and from property taxes). States in the Northeast have the highest average total local revenue and local revenue from property taxes. Overall, states in the South have the lowest average local revenue. States in the Midwest are in the middle, and states in the West are distributed across the range. 
+-  There regional patterns of average total local revenue and local revenue from property taxes of school districts. These patterns are similar for both types of local revenue (total and from property taxes). States in the Northeast have the highest average total local revenue and local revenue from property taxes. Overall, states in the South have the lowest average local revenue. States in the Midwest are in the middle, and states in the West are distributed across the range. 
 -  Districts in some states receive $0 in local revenue from property taxes (e.g., Connecticut). 
--  There are not similar regional patterns when examining the average percent proficient on RLA assessments for all students (grades 3 to high school). Overall, it does appear that states in the South have lower percentages of students at or above proficient compared to states in other regions. 
-
+-  These same regional patterns are not observed when examining the average percent proficient on RLA assessments for all students (grades 3 to high school). However, it does appear that states in the South have lower average percentages of students at or above proficient on reading assessments compared to states in other regions. 
 
 **Prior Versions** 
 
@@ -585,8 +584,8 @@ colorblindr::cvd_grid(p)
 As all three plots are similar in regard to format and design choices and went through a very similar (if not the exact same) evolution, I've included the previous versions of just one plot above. 
 
 -  Prior Version 1 is my first attempt at this plot. It is very rough and includes all default settings and elements. 
--  I made many refinements to Prior Version 2 includes many refinements, including ordering of the y-axis, transparency, minimized plot elements, and labeling. However, there was still room for improvement in terms of what information could be included.  
--  In Prior Version 3, I added color by region to evaluate for and highlight regional patterns. This version uses this default color palette. 
--  Prior Version 4 includes my selection of a final color palette, improvements to the color legend, and addition of a vertical reference line. 
+-  I made many refinements in Prior Version 2, including ordering of the y-axis, transparency, minimized plot elements, and labeling. However, there was still room for improvement in terms of what information could be included.  
+-  In Prior Version 3, I added color by region to evaluate for and highlight regional patterns. This version uses the default color palette. 
+-  Prior Version 4 includes my selection of a final color palette (from a Wes Anderson package), improvements to the color legend, and addition of a vertical reference line. 
 -  Prior Version 5 demonstrates that I evaluated the color palette for different types of color blindness. 
 -  Between Prior Version 4 and the final version, I simplified the x-axis breaks even more, made the range and breaks of the x-axis the same between revenue plots (in order to facilitate comparison), and further reduced the transparency of the bars.  

@@ -1,6 +1,7 @@
 ---
 title: "ggridges: mean test score by subgroup and test by region"
 description: |
+  Mean test score above or at proficient grouped by regions in the United 	States
 author:
   - name: Rebecca Gordon
 date: 2022-03-09
@@ -54,11 +55,11 @@ rlasch_10 <- get_data("EDFacts_rla_achievement_sch_2010_2019")
 #### Rebecca
 **Research Question:** 
 
-How do high school students’ subgroup makeup (i.e., Race/ethnicity, Male vs. Female, economically disadvantaged, Limited English, Migrant status, Disability status, and Homelessness) differ among states/regions? 
+How do high school students’ subgroup makeup (i.e., Race/ethnicity, Male vs. Female, economically disadvantaged, Limited English, Migrant status, Disability status, and Homelessness) and mean test scores in math and reading differ among states/regions? 
 
 - Design choices: 
 	- Lightened the colors of the ridge lines so that they are more transparent.
-- Findings: There are no clear regional differences. However, patterns among subgroups showed that children with disabilities and English learners scored lowest in proficiency. Thus, more resources should be provided to these students so they can have greater academic success.
+- Findings: There are no clear regional differences. However, patterns among subgroups showed that children with disabilities and English learners scored lowest in test score proficiency. Thus, more resources should be provided to these students so they can have greater academic success.
 
 ```{r rebecca-datawrangling, echo=FALSE}
 
@@ -182,7 +183,7 @@ ggplot(df_pivot, aes(x = mean_pct,
 ggplot(df_pivot, aes(x = mean_pct, 
 										 y = fct_reorder(Subgroup, mean_pct), 
 										 fill = Region)) +
-	guides(alpha = "none") +
+	guides() +
 	geom_density_ridges() +
 	theme_minimal() +
 	labs(title = 'Mean percentage of students that scored at or above proficient in Math and Reading',

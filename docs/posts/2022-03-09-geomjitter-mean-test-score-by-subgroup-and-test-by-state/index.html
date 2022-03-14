@@ -87,7 +87,7 @@ code span.wa { color: #5e5e5e; font-style: italic; } /* Warning */
 
 
   <!--radix_placeholder_meta_tags-->
-<title>EDLD 652 Blog: geom_jitter: mean test score by subgroup and test by state</title>
+<title>EDLD 652 Blog: geom_jitter: mean test score by students' subgroup and test(math or reading) by state</title>
 
 <meta property="description" itemprop="description" content="Plot showing mean test score by subgroup and test by state"/>
 
@@ -98,7 +98,7 @@ code span.wa { color: #5e5e5e; font-style: italic; } /* Warning */
 <meta name="article:author" content="Rebecca Gordon"/>
 
 <!--  https://developers.facebook.com/docs/sharing/webmasters#markup -->
-<meta property="og:title" content="EDLD 652 Blog: geom_jitter: mean test score by subgroup and test by state"/>
+<meta property="og:title" content="EDLD 652 Blog: geom_jitter: mean test score by students&#39; subgroup and test(math or reading) by state"/>
 <meta property="og:type" content="article"/>
 <meta property="og:description" content="Plot showing mean test score by subgroup and test by state"/>
 <meta property="og:locale" content="en_US"/>
@@ -106,14 +106,14 @@ code span.wa { color: #5e5e5e; font-style: italic; } /* Warning */
 
 <!--  https://dev.twitter.com/cards/types/summary -->
 <meta property="twitter:card" content="summary"/>
-<meta property="twitter:title" content="EDLD 652 Blog: geom_jitter: mean test score by subgroup and test by state"/>
+<meta property="twitter:title" content="EDLD 652 Blog: geom_jitter: mean test score by students&#39; subgroup and test(math or reading) by state"/>
 <meta property="twitter:description" content="Plot showing mean test score by subgroup and test by state"/>
 
 <!--/radix_placeholder_meta_tags-->
   <!--radix_placeholder_rmarkdown_metadata-->
 
 <script type="text/json" id="radix-rmarkdown-metadata">
-{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["title","description","author","date","output"]}},"value":[{"type":"character","attributes":{},"value":["geom_jitter: mean test score by subgroup and test by state"]},{"type":"character","attributes":{},"value":["Plot showing mean test score by subgroup and test by state"]},{"type":"list","attributes":{},"value":[{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name"]}},"value":[{"type":"character","attributes":{},"value":["Rebecca Gordon"]}]}]},{"type":"character","attributes":{},"value":["2022-03-09"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["distill::distill_article"]}},"value":[{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["self_contained"]}},"value":[{"type":"logical","attributes":{},"value":[false]}]}]}]}
+{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["title","description","author","date","output"]}},"value":[{"type":"character","attributes":{},"value":["geom_jitter: mean test score by students' subgroup and test(math or reading) by state"]},{"type":"character","attributes":{},"value":["Plot showing mean test score by subgroup and test by state"]},{"type":"list","attributes":{},"value":[{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name"]}},"value":[{"type":"character","attributes":{},"value":["Rebecca Gordon"]}]}]},{"type":"character","attributes":{},"value":["2022-03-09"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["distill::distill_article"]}},"value":[{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["self_contained"]}},"value":[{"type":"logical","attributes":{},"value":[false]}]}]}]}
 </script>
 <!--/radix_placeholder_rmarkdown_metadata-->
   
@@ -1871,12 +1871,6 @@ function init_distill() {
 
     // hoverable references
     $('span.citation[data-cites]').each(function() {
-      if ($(this).children()[0].nodeName == "D-FOOTNOTE") {
-        var fn = $(this).children()[0]
-        $(this).html(fn.shadowRoot.querySelector("sup"))
-        $(this).id = fn.id
-        fn.remove()
-      }
       var refs = $(this).attr('data-cites').split(" ");
       var refHtml = refs.map(function(ref) {
         return "<p>" + $('#ref-' + ref).html() + "</p>";
@@ -2395,7 +2389,7 @@ d-appendix d-footnote-list a.footnote-backlink {
 <!--radix_placeholder_front_matter-->
 
 <script id="distill-front-matter" type="text/json">
-{"title":"geom_jitter: mean test score by subgroup and test by state","description":"Plot showing mean test score by subgroup and test by state","authors":[{"author":"Rebecca Gordon","authorURL":"#","affiliation":"&nbsp;","affiliationURL":"#","orcidID":""}],"publishedDate":"2022-03-09T00:00:00.000-08:00","citationText":"Gordon, 2022"}
+{"title":"geom_jitter: mean test score by students' subgroup and test(math or reading) by state","description":"Plot showing mean test score by subgroup and test by state","authors":[{"author":"Rebecca Gordon","authorURL":"#","affiliation":"&nbsp;","affiliationURL":"#","orcidID":""}],"publishedDate":"2022-03-09T00:00:00.000-08:00","citationText":"Gordon, 2022"}
 </script>
 
 <!--/radix_placeholder_front_matter-->
@@ -2420,7 +2414,7 @@ d-appendix d-footnote-list a.footnote-backlink {
 <!--/radix_placeholder_site_before_body-->
 
 <div class="d-title">
-<h1>geom_jitter: mean test score by subgroup and test by state</h1>
+<h1>geom_jitter: mean test score by students’ subgroup and test(math or reading) by state</h1>
 <!--radix_placeholder_categories-->
 <!--/radix_placeholder_categories-->
 <p><p>Plot showing mean test score by subgroup and test by state</p></p>
@@ -2438,7 +2432,7 @@ d-appendix d-footnote-list a.footnote-backlink {
 </div>
 <h4 id="rebecca">Rebecca</h4>
 <p><strong>Research Question:</strong></p>
-<p>How do high school students’ subgroup makeup (i.e., Race/ethnicity, Male vs. Female, economically disadvantaged, Limited English, Migrant status, Disability status, and Homelessness) differ among states/regions?</p>
+<p>How do high school students’ subgroup makeup (i.e., Race/ethnicity, Male vs. Female, economically disadvantaged, Limited English, Migrant status, Disability status, and Homelessness) and mean test scores in math and reading differ among states/regions?</p>
 <ul>
 <li>Design choices:
 <ul>
@@ -2447,7 +2441,7 @@ d-appendix d-footnote-list a.footnote-backlink {
 <li>Only used the mean proficiency scores for each</li>
 <li>Expanded height and width to accommodate the data</li>
 </ul></li>
-<li>Findings: No patterns emerged</li>
+<li>Findings: No patterns emerged expect math scores were on average lower than reading scores.</li>
 </ul>
 <div class="layout-chunk" data-layout="l-body">
 
