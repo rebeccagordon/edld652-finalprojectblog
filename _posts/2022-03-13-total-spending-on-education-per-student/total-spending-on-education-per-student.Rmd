@@ -65,6 +65,7 @@ total2 <- total2 %>%
   mutate(spend_per_stu = TOTALEXP/V33,
          spend_per_stu_k = (TOTALEXP/V33)/1000)
 ```
+#### Ksenia
 
 **Research Question:** 
 
