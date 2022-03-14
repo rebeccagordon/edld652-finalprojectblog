@@ -1,7 +1,7 @@
 ---
 title: "fitted lines: regional case studies of student race/ethnicity subgroup outcomes"
 description: |
-  The relationship between student reading outcomes and district property tax revenue for race and ethnicity subgroups was evaluated for a subset of four states, representing every US Census region. 
+  The relationship between district property tax revenue and student reading outcomes by race and ethnicity subgroups was evaluated for a subset of four states, representing every US Census region. 
 author:
   - name: Amy Warnock
 date: 2022-03-13
@@ -45,7 +45,8 @@ What is the relationship between district revenue from property taxes and readin
 
 **Design choices:**
 
--  Fitted linear regression lines by student race/ethnicity subgroup with scatterplot retained, using transparency and color to emphasize fitted lines
+-  Fitted linear regression lines by student race/ethnicity subgroup to observe the relationship between variables for subgroups, comparisons between subgroups, and the interaction between revenue and race/ethnicity
+-  I retained the original state-level scatterplot, using transparency and color to emphasize fitted lines
 -  Improved cognitive load by minimizing graph elements, such as shading, axis breaks, and grid lines
 -  Selected Okabe Ito palette, which is color-blind friendly
 -  Clear, succinct, and polished title and labels
@@ -433,10 +434,10 @@ viz3_rla00long_fiscal_2010 %>%
 
 **Findings and Observations:**
 
--  California: There appears to be a positive relationship between district revenue from property taxes and the percent of students attaining proficiency on reading assessments for all student subgroups. Overall, the strength of this relationship appears similar but is perhaps somewhat stronger for students reported as Asian/Pacific Islander and weaker in strength for students reported as American Indian/Alaska Native. 
--  Michigan: The fitted lines for White, Hispanic/Latino, and American Indian/Alaska Native subgroups have slight positive slopes, indicating that percent proficiency for these subgroups does not increase based on an increase in funding from property taxes. The fitted lines for Black and Asian/Pacific Islander subgroups are steeper, indicating a stronger association. 
--  Louisiana: There appears to be a moderate positive association between property tax revenue for all student subgroups except students reported as American Indian/Alaska Native. It appears that the percentage of American Indian/Alaska Native students scoring at or above proficient on reading assessments does not increase with an increase in funding from property taxes.
--  New Jersey: There appears to be a strong relationship in funding from property taxes and student proficiency in reading for all subgroups except American Indian/Alaska Native students. The association between funding and proficiency for American Indian/Alaska Native students appears to be strongly negative. I did not get to this, but it would be worth examining the number of districts that reported proficiency data for this subgroup compared to other subgroups.  
+-  California: Overall, the percentage of White and Asian/Pacific Islander students scoring at/above proficient on reading assessments are higher than other subgroups. The percentage of students who are Hispanic/Latino who are at/above proficient is lowest. There appears to be a positive relationship between district revenue from property taxes and the percent of students attaining proficiency on reading assessments for all student subgroups. Overall, the effect of revenue  appears similar across subgroups but is perhaps somewhat stronger for students reported as Asian/Pacific Islander and weaker in strength for students reported as American Indian/Alaska Native. 
+-  Michigan: Overall, the percentage of White and Asian/Pacific Islander students scoring at/above proficient on reading assessments are higher than other subgroups. The percentage of students at/above proficient who are Black is lowest. The fitted lines for White, Hispanic/Latino, and American Indian/Alaska Native subgroups have slight positive slopes, indicating that percent proficiency for these subgroups does not increase based on an increase in funding from property taxes. The fitted lines for Black and Asian/Pacific Islander subgroups are steeper, indicating a stronger association. 
+-  Louisiana: Overall, the percentage Asian/Pacific Islander students scoring at/above proficient on reading assessments is higher than other subgroups. The percentage of students at/above proficient who are Black is lowest. There appears to be a moderate positive association between property tax revenue for all student subgroups except students reported as American Indian/Alaska Native. It appears that the percentage of American Indian/Alaska Native students scoring at or above proficient on reading assessments does not increase as funding from property taxes increases.
+-  New Jersey: Overall, the percentage Asian/Pacific Islander students scoring at/above proficient on reading assessments is higher than other subgroups. The percentage of students at/above proficient who are Black is lowest. There appears to be a strong relationship in funding from property taxes and student proficiency in reading for all subgroups except American Indian/Alaska Native students. The association between funding and proficiency for American Indian/Alaska Native students appears to be strongly negative. I did not get to this, but it would be worth examining the number of districts that reported proficiency data for this subgroup compared to other subgroups.  
 
 **Prior Versions** 
 
@@ -528,8 +529,8 @@ colorblindr::cvd_grid(cavalcanti)
 **Evolution of plots over time:** 
 
 -  Prior Version 1 is a broad preliminary exploratory visualization across all states. I fitted linear regressions lines to student subgroups, including race/ethnicity, English Learners, students with disabilities, economically disadvantaged students, and students overall.
--  From the broad exploration, I narrowed the scope to one state from each US Census region. Prior Version 2 displays the relationship between district revenue from property taxes and outcomes of student race/ethnicity subgroups for districts in the state of California. I tried a color palette from the Wes Anderson palette.
--  Unlike the color palette I used for the bar plots, this color palette was not colorblind-friendly (Prior Version 3). 
--  Between this version and the final version, I shifted to using the Okabe Ito palette, adjusted the color and transparency of the scatterplot points, removed the outlines from the points, and refined the color legend. 
+-  From the broad exploration, I narrowed the scope to one state from each US Census region. Prior Version 2 displays the relationship between district revenue from property taxes and outcomes of student race/ethnicity subgroups for districts in the state of California. I tried a different Wes Anderson palette.
+-  Unlike the color palette I used for the bar plots, this color palette was not colorblind-friendly (Prior Version 3). The palette from the bar plots didn't have enough colors for these plots. 
+-  So, between this version and the final version, I shifted to using the Okabe Ito palette. I also adjusted the color and transparency of the scatterplot points, removed the outlines from the points, and refined the color legend. 
  
 

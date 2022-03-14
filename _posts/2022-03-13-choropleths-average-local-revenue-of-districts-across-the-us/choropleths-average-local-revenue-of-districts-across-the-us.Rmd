@@ -1,7 +1,7 @@
 ---
 title: "maps: average local revenue of districts across the US"
 description: |
-  Maps illustrating average district total local revenue and average district local reveneue from property taxes in each state.
+  Maps illustrating average district local revenue (total and from property taxes) in each US state.
 author:
   - name: Amy Warnock
 date: 2022-03-13
@@ -52,7 +52,7 @@ What is the average district local revenue and district revenue from property ta
 
 -  Choropleths instead of bar graphs for communicating average district local revenue (total and from property taxes)
 -  Improved cognitive load by minimizing graph elements, such as background shading and longitude/latitude grid lines
--  Selected a color palette composed of muted, natural colors that is also color-blind friendly
+-  Selected a color palette composed of more natural colors that is also color-blind friendly
 -  Selected ordering of color palette from light to dark as it emphasized the Northeast more effectively than dark to light
 -  Customized fill color for states with missing data
 -  Clear, succinct, and polished title and labels
@@ -352,9 +352,9 @@ viz3_map_df %>%
 **Findings and Observations:**
 
 -  These maps use the same data as the bar plots but present the results in a different format. 
--  Some of the regional patterns are still readily observable with the map format (higher revenue in the Northeast, lower in the South). 
--  It is more difficult to make precise revenue comparisons between states. 
--  What is easier to observe on the maps in comparison to the bar plots is differences between average district local revenue and local revenue from property taxes. For example, Connecticut has the highest total local revenue but one of the lowest average revenues from property taxes. 
+-  I think that some of the regional patterns are still readily observable with the map format (higher revenue in the Northeast, lower in the South), while others are a bit more difficult to discern. Compared to the bar plots, it is a bit more difficult to make precise comparisons between average revenue. 
+-  However, the maps are striking and are effective at communicating drastic differences between states (e.g., the Northeast, Nevada).
+-  What is also easier to observe on the maps in comparison to the bar plots is differences between average district local revenue and local revenue from property taxes. For example, Connecticut has the highest total local revenue but no revenue from property taxes. This is easier to see when pivoting between maps than between bar plots.
 
 **Prior Versions** 
 
@@ -485,8 +485,8 @@ ggplot(aes(geometry = geometry,
 
 As both plots are similar in regard to format and design choices and went through the same evolution, I've included the previous versions of just one plot above. 
 
--  Prior Version 1 is my first attempt at this plot. I used the viridis magma palette. I had not yet figured out how to fill the missing states and had only made some refinements. 
--  In Prior Version 2, I had figured out how to fill states with missing data with the default gray. I had also made initial refinements to the color legend. 
--  Prior Version 3 shows one of my first attempts at exploring different color palettes. I like viridis magma and thought it worked well, but I wanted a more subdued color palette to be cohesive with the color palette I had chosen for the bar plots. Prior Version 3 also includes a discretzied color legend. The issue is that not all colors on the map were represented in the legend. I tried problem-solving but eventually opted to move on.
--  Prior Version 4 includes my selection of a final color palette. I had initially thought I would use the scale as displayed (light to dark). After coming back to this project with fresh eyes, I decided to go with dark to light and to change the state borders to a darker color to distinguish states from the white background. 
-- I had also wanted to try out a divergent color scale (Prior Version 5). I think the diverging color palette is compelling but communicates a different message (most states have district local revenue near or below the national average instead of overall, states in Northeast have the highest average district local revenue).  
+-  Prior Version 1 is my first attempt at this plot. I used the viridis magma palette. I had not yet figured out how to fill the missing states and had only made some refinements (title, caption, background). 
+-  In Prior Version 2, I had figured out how to fill states with missing data but the fill color is the default gray. I had also made initial refinements to the color legend. 
+-  Prior Version 3 shows one of my first attempts at exploring different color palettes. I like viridis magma and thought it worked well, but I wanted a more subdued color palette to be cohesive with the color palette I had chosen for the bar plots. Prior Version 3 also includes a discretized color legend. The issue is that not all colors on the map were represented in the legend. I tried problem-solving but eventually opted to move on.
+-  Prior Version 4 includes my selection of a final color palette. I had initially thought I would use the scale as displayed (light to dark). After coming back to this project with fresh eyes, I decided to go with dark to light and to change the state borders to a darker color to distinguish perimeter states from the white background. 
+- Prior Version 5 is exploring the use of a divergent color palette. I think the diverging color palette is compelling but communicates a different message (most states have district local revenue near or below the national average instead of overall, states in Northeast have the highest average district local revenue).  
