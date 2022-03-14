@@ -1,0 +1,503 @@
+---
+title: "Total Spending on Instruction, Special Education, and Textbooks by state"
+description: |
+  How much does each state spend on instruction, special education, and textbooks?
+author:
+  - name: Ksenia Gordeeva
+date: 2022-03-12
+output:
+  distill::distill_article:
+    self_contained: false
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      eval = TRUE,
+                      message = FALSE,
+                      warning = FALSE)
+
+
+library(edld652)
+library(tidyverse)
+library(here)
+library(janitor)
+library(skimr)
+library(rio)
+#install.packages("fuzzyjoin")
+library(fuzzyjoin)
+library(viridis)
+library(patchwork)
+library(albersusa)
+library(ggridges)
+#install.packages("biscale")
+library(biscale)
+#install.packages("cowplot")
+library(cowplot)
+library(grid)
+#install.packages("gridtext")
+library(gridtext)
+#install.packages("usmap")
+library(usmap)
+library(colorblindr)
+library(scales)
+#devtools::install_github("gadenbuie/xaringanExtra")
+```
+
+```{r load-datasets, echo=FALSE}
+fiscal2010 <- get_data("NCES_CCD_fiscal_district_2010")
+```
+
+```{r ksenia-fiscaldata, echo=FALSE}
+regions <- import(here("data", "us_census_bureau_regions_and_divisions.csv"), setclass = "tbl_df") %>% 
+  rename(`STNAME` = State,
+         STABBR = `State Code`) 
+
+#spending on instruction by state 
+instruction <- fiscal2010 %>%
+  group_by(STNAME) %>%
+      summarise(E13 = sum(E13), 
+                V33 = sum(V33))
+
+instruction2 <- left_join(instruction, regions, by = "STNAME")
+
+#Change scale of total spending on instruction
+instruction2$E13_B  <- instruction2$E13/1000000000
+
+#calculating instruction spending per student
+instruction2 <- instruction2 %>% 
+  mutate(instr_per_stu = E13/V33,
+         instr_per_stu_k = (E13/V33)/1000)
+
+#spending on Special Ed
+SpEd <- fiscal2010 %>%
+  group_by(STNAME) %>%
+      summarise(Z36 = sum(Z36), 
+                V33 = sum(V33))
+
+SpEd2 <- left_join(SpEd, regions, by = "STNAME")
+
+#removing the states with no data on Special Ed spending
+SpEd2 <- SpEd2[SpEd2$Z36 >= 0, ]
+
+#Change scale of total spending on SPecial Ed
+SpEd2$Z36_B  <- SpEd2$Z36/1000000000
+
+#calculating instruction spending per student
+SpEd2 <- SpEd2 %>% 
+  mutate(SpEd_per_stu = Z36/V33)
+
+#spending on textbooks by state 
+textbooks <- fiscal2010 %>%
+  group_by(STNAME) %>%
+      summarise(V93 = sum(V93),
+                V33 = sum(V33))
+textbooks2 <- left_join(textbooks, regions, by = "STNAME")
+
+#removing the states with no data on textbook spending
+textbooks2 <- textbooks2[textbooks2$V93 >= 0, ]
+
+#Change scale of total spending on textbooks
+textbooks2$V93_M  <- textbooks2$V93/1000000
+
+#calculating textbook spending per student
+textbooks2 <- textbooks2 %>% 
+  mutate(book_per_stu = V93/V33)
+```
+#### Ksenia
+
+**Research Question:** 
+
+How much is spent total on a single student yearly and how do these amounts vary by state?
+
+To illustrate the total expenditure per state, I decided to look at spending per single student. The raw amounts of total spending don't give us a full picture, because states vary by population size and the number of students enrolled in high schools. Thus, looking at the expenditure per single student allows for a more comparable information.  
+
+**Design choices:**
+
+* Using a color-blind friendly *OkabeIto* pallette.
+* Mapping regions to color to add the extra dimension for comparison.
+* Creating a vertical bar to show the national average of the total spending per student, which allows to easily see which states' spending is above and below average. 
+* Balancing the cognitive load by excluding unnecessary components: the title of the Y-axes, horizontal grids, embedded value of the total spending on each bar. 
+
+
+The first plot reflects the total spending per single student by state, while the second plot illustrates the total spending per single student grouped by the region: : 
+
+```{r panelset, echo=FALSE}
+xaringanExtra::use_panelset()
+```
+::::: {.panelset}
+::: {.panel}
+## Spending on Instruction {.panel-name}
+
+```{r ksena-instruction, fig.height=10, fig.width=9, echo=FALSE}
+#plotting spending on instruction per student by state 
+instruction2  %>%
+  ggplot(aes(instr_per_stu_k, fct_reorder(STNAME, instr_per_stu_k))) +
+  geom_col(aes(fill = Region),
+           alpha = 0.9) +
+  scale_fill_OkabeIto() + 
+  scale_x_continuous(expand = c(0, 0), 
+                     limits = c(0, 16),
+                     breaks = c(0, 5, 10, 15), 
+                     labels = c("0", "5K", "10K", "15K")) + 
+  labs(title = "Total Spending on Instruction Per Single Student by State",
+       #y = "State",
+       x = "Total Yearly Spending on Instruction Per Student, in USD",
+       caption = "Source: National Center for Education Statistics", 
+       fill = "Region") + 
+  geom_vline(aes(xintercept = mean(instruction2$instr_per_stu_k)), 
+             data = instruction2, 
+             linetype = 'dotted',
+             size = 0.8,
+             alpha = 1, 
+             color = "#29211F") +
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        axis.title.y = element_blank(),
+        plot.title = element_text(size = 20)) +
+  annotate(geom = "label",
+           x = mean(instruction2$instr_per_stu_k), 
+           y = 10, 
+           label = "US Average = 
+$ 6,531",
+           vjust = .5,
+           color = "#29211F",
+           size = 4)
+```
+#### Findings 
+When exploring the data for the spending on instruction per individual student, we see that New York spends the most (\$12,693). That exceeds the total instructional spending per student of the two runner-up states, New Jersey with \$9,706 and Vermont with \$9,555. Such a drastic increase in New York's spending can be correlated with the average teacher's salary in that state. All Northeastern state are in the top 15 highest spenders, as is the case with the total spending per student. Interestingly, District of Columbia that spent the most total per student, is only in the 9th place when it comes to instructional expenses only: DC reported \$8,194 in average instructional expenses per student. Arizona, Idaho, and Utah spend the least total on Instruction, which is identical to the results of the total expenditure analysis. 
+:::
+::: {.panel}
+## Spending on Special Education {.panel-name}
+
+The plot below illustrates the yearly spending on Special Education per state. Due to missing data on the number of students with disabilities in certain states, and on the Special Education spending in other states, the plot presents the gross amount of special education expenditure reported by state, not per single student with special needs.
+
+```{r ksena-SpEd, fig.height=10, fig.width=9, echo=FALSE}
+SpEd2  %>%
+  ggplot(aes(Z36_B, fct_reorder(STNAME, Z36_B))) +
+  geom_col(aes(fill = Region),
+           alpha = 0.9) +
+  scale_fill_OkabeIto() + 
+  scale_x_continuous(expand = c(0, 0), 
+                     limits = c(0, 4),
+                     breaks = c(0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5), 
+                     labels = c("0", "500 million", "1 billion", "1.5 billion", "2 billion", "2.5 billion", "3 billion", "3.5 billion"))+ 
+  labs(title = "Total Spending on Special Ed by State",
+       #y = "State",
+       x = "Total Yearly Spending on Special Ed, in USD",
+       caption = "Source: National Center for Education Statistics", 
+       fill = "Region") + 
+  geom_vline(aes(xintercept = mean(SpEd2$Z36_B)), 
+             data = SpEd2, 
+             linetype = 'dotted',
+             size = 0.8,
+             alpha = 1, 
+             color = "#29211F") +
+
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank(),
+         axis.title.y = element_blank(),
+        plot.title = element_text(size = 20)) +
+  annotate(geom = "label",
+           x = mean(SpEd2$Z36_B), 
+           y = 10, 
+           label = "US Average = 
+$ 6,053,610",
+           vjust = .5,
+           color = "#29211F",
+           size = 4)
+```
+#### Findings 
+This plot is not very informative due to reporting the gross amounts spent, not the amount of spending per student. There are no evident patterns across regions. All the states that are above the national average value (e.g., New York, California, Florida, Pennsylvania, New Jersey) are the highly populated states, so the increased gross spending is expected. At the same time, the lowest spenders (e.g., District of Columbia, North Dakota, South Dakota) are the least populated territories, so the lowest ranking may not be illustrative of an actual state of events. 
+
+To make the data a little more comparable, I created the second plot that provides the total spending on Special Education per single student (any student, not student with disabilities).
+
+```{r ksena-SpEd-perstu, fig.height=10, fig.width=9, echo=FALSE}
+
+#Plotting the total Spending on SPecial Ed by state per student
+SpEd2  %>%
+  ggplot(aes(SpEd_per_stu, fct_reorder(STNAME, SpEd_per_stu))) +
+  geom_col(aes(fill = Region),
+           alpha = 0.9) +
+  scale_fill_OkabeIto() + 
+  scale_x_continuous(expand = c(0, 0), 
+                     limits = c(0, 1600),
+                     breaks = c(0, 250, 500, 750, 1000, 1250, 1500), 
+                     labels = c("0", "250", "500", "750", "1000", "1250", "1500"))+ 
+  labs(title = "Total Spending on Special Ed by State per single student",
+       x = "Total Yearly Spending on Special Ed per student, in USD",
+       caption = "Source: National Center for Education Statistics", 
+       fill = "Region") + 
+  geom_vline(aes(xintercept = mean(SpEd2$SpEd_per_stu)), 
+             data = SpEd2, 
+             linetype = 'dotted',
+             size = 0.8,
+             alpha = 1, 
+             color = "#29211F") +
+
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank(),
+         axis.title.y = element_blank(),
+        plot.title = element_text(size = 20)) +
+  annotate(geom = "label",
+           x = mean(SpEd2$SpEd_per_stu), 
+           y = 10, 
+           label = "US Average = 
+$ 644.68",
+           vjust = .5,
+           color = "#29211F",
+           size = 4)
+```
+The second plot provides a clearer picture. Consistent with other spending categories, Northeastern states spend the most, and all report the yearly spending above the national average (\$6644.68). When normalized for the number of high school student in each state, New Hampshire is the leader in spending on special education, followed by New Jersey and New York. The Western states spend the least on special education, with almost all Western states yielding total spending below national avergae (with the exception of Wyoming and Hawaii). Oregon, Utah, and South Dakota spend the least amount on special education among the states that reported their Special Education Expenditure. 
+:::
+::: {.panel}
+## Spending on Textbooks {.panel-name}
+
+The plot below illustrates the yearly spending on textbooks per single student by state. 
+
+```{r ksenia-books, fig.height=10, fig.width=9, echo=FALSE}
+textbooks2  %>%
+  ggplot(aes(book_per_stu, fct_reorder(STNAME, book_per_stu))) +
+  geom_col(aes(fill = Region),
+           alpha = 0.9) +
+  scale_fill_OkabeIto() + 
+  scale_x_continuous(expand = c(0, 0), 
+                     limits = c(0, 150),
+                     breaks = c(0, 25, 50, 75, 100, 125, 150))+ 
+                    # labels = c("0", "5K", "10K", "15K")) + 
+  labs(title = "Total Spending on Textbooks Per Single Student by State",
+       #y = "State",
+       x = "Total Yearly Spending on Textbooks Per Student, in USD",
+       caption = "Source: National Center for Education Statistics", 
+       fill = "Region") + 
+  geom_vline(aes(xintercept = mean(textbooks2$book_per_stu)), 
+             data = instruction2, 
+             linetype = 'dotted',
+             size = 0.8,
+             alpha = 1, 
+             color = "#29211F") +
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank(),
+         axis.title.y = element_blank(),
+        plot.title = element_text(size = 20)) +
+  annotate(geom = "label",
+           x = mean(textbooks2$book_per_stu), 
+           y = 10, 
+           label = "US Average = 
+$ 60.01",
+           vjust = .5,
+           color = "#29211F",
+           size = 4)
+```
+#### Findings 
+The general patterns in textbooks spending diverge a little bit from the patterns we have observed in previous categories. For example, the spendings of Western states are not that low in relation to the rest of the country this time: Western states are divided roughly equally in whether they are above the national average value of \$60.01 per student or below. Even though the state that spends the most on books (Pennsylvania) is in Northeast, the states of the region are also equally distributed among the range this time. 
+:::
+::: {.panel}
+## Prior versions {.panel-name}
+
+All prior versions of the plots reflecting expenditure on instruction, special education, and textbooks match the ones described in the previous post on the total expenditure. The reasons they were not chosen fot the final rendering are also explained in the previous blog post. The previous versions for the instruction expenditure are provided below for illustrative purposes. 
+
+#### Bar plot with a single color and without ordering of the states according to the amount spent
+```{r ksenia-instr-prior1, fig.height=8, echo=FALSE}
+instruction2  %>%
+  ggplot(aes(instr_per_stu_k, STNAME)) +
+  geom_col(alpha = 0.9) +
+  scale_x_continuous(expand = c(0, 0), 
+                     limits = c(0, 16),
+                     breaks = c(0, 5, 10, 15), 
+                     labels = c("0", "5K", "10K", "15K")) + 
+  labs(title = "Total Spending on instruction Per Single Student by State",
+       y = "State",
+       y = "State",
+       x = "Total Yearly Spending on Instruction Per Student, in USD",
+       caption = "Source: National Center for Education Statistics", 
+       fill = "Region") + 
+  theme_minimal()
+```
+
+#### Bar plot with an introduction of color to map states by regions and ordering of the states according to the amount spent
+
+```{r ksenia-instr-prior2, fig.height=8, echo=FALSE}
+instruction2  %>%
+  ggplot(aes(instr_per_stu_k, fct_reorder(STNAME, instr_per_stu_k))) +
+  geom_col(aes(fill = Region),
+           alpha = 0.9) +
+  scale_fill_OkabeIto() + 
+  scale_x_continuous(expand = c(0, 0), 
+                      limits = c(0, 16),
+                     breaks = c(0, 5, 10, 15), 
+                     labels = c("0", "5K", "10K", "15K")) + 
+  labs(title = "Spending on Instruction Per Single Student by State",
+       y = "State",
+       x = "Yearly Spending on Instruction per Student, in USD",
+       caption = "Source: National Center for Education Statistics", 
+       fill = "Region") + 
+  theme_minimal()
+```
+
+#### Bar plot with a vertical line to reflect the national average value on intructional spending and embedding of the state spending value on each bar
+
+```{r ksenia-instr-prior3, fig.height=8, echo=FALSE}
+instruction2  %>%
+  group_by(Region) %>% 
+  arrange(desc(-instr_per_stu_k), .by_group = TRUE) %>% 
+  mutate(STNAME=factor(STNAME, levels=STNAME)) %>% 
+  ggplot(aes(instr_per_stu_k, STNAME)) +
+  geom_col(aes(fill = Region),
+           alpha = 0.9) +
+  scale_fill_OkabeIto() + 
+  scale_x_continuous(expand = c(0, 0), 
+                      limits = c(0, 16),
+                     breaks = c(0, 5, 10, 15), 
+                     labels = c("0", "5K", "10K", "15K")) + 
+  labs(title = "Spending on Instruction Per Single Student by State",
+       x = "Yearly Spending on Instruction per Student, in USD",
+       caption = "Source: National Center for Education Statistics", 
+       fill = "Region") + 
+   geom_text(
+    aes(instr_per_stu_k, STNAME, label = paste (round(instr_per_stu_k, 2), " K.")),
+    nudge_x = 0.85,
+    size = 2
+  ) +
+  geom_vline(aes(xintercept = mean(instruction2$instr_per_stu_k)), 
+             data = instruction2, 
+             linetype = 'dotted',
+             size = 0.8,
+             alpha = 1, 
+             color = "gray60") +
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        axis.title.y = element_blank()) +
+  annotate(geom = "label",
+           x = mean(instruction2$instr_per_stu_k), 
+           y = 24, 
+           label = "US Average = 
+$ 6,531",
+           vjust = .5,
+           color = "#29211F",
+           size = 3)
+```
+:::
+::: {.panel}
+## Code for the final plots {.panel-name}
+
+```{r ksenia-instr-code, fig.show='hide'}
+#Plotting spending on Instruction by state 
+instruction2  %>%
+  ggplot(aes(instr_per_stu_k, fct_reorder(STNAME, instr_per_stu_k))) +
+  geom_col(aes(fill = Region),
+           alpha = 0.9) +
+  scale_fill_OkabeIto() + 
+  scale_x_continuous(expand = c(0, 0), 
+                     limits = c(0, 16),
+                     breaks = c(0, 5, 10, 15), 
+                     labels = c("0", "5K", "10K", "15K")) + 
+  labs(title = "Total Spending on Instruction Per Single Student by State",
+       x = "Total Yearly Spending on Instruction Per Student, in USD",
+       caption = "Source: National Center for Education Statistics", 
+       fill = "Region") + 
+  geom_vline(aes(xintercept = mean(instr_per_stu_k)), 
+             data = instruction2, 
+             linetype = 'dotted',
+             size = 0.8,
+             alpha = 1, 
+             color = "#29211F") +
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        axis.title.y = element_blank(),
+        plot.title = element_text(size = 20)) +
+  annotate(geom = "label",
+           x = mean(instruction2$instr_per_stu_k), 
+           y = 10, 
+           label = "US Average = 
+$ 6,531",
+           vjust = .5,
+           color = "#29211F",
+           size = 4)
+
+#Plotting the total Spending on SPecial Ed by state per student
+SpEd2  %>%
+  ggplot(aes(SpEd_per_stu, fct_reorder(STNAME, SpEd_per_stu))) +
+  geom_col(aes(fill = Region),
+           alpha = 0.9) +
+  scale_fill_OkabeIto() + 
+  scale_x_continuous(expand = c(0, 0), 
+                     limits = c(0, 1600),
+                     breaks = c(0, 250, 500, 750, 1000, 1250, 1500), 
+                     labels = c("0", "250", "500", "750", "1000", "1250", "1500"))+ 
+  labs(title = "Total Spending on Special Ed by State per single student",
+       x = "Total Yearly Spending on Special Ed per student, in USD",
+       caption = "Source: National Center for Education Statistics", 
+       fill = "Region") + 
+  geom_vline(aes(xintercept = mean(SpEd2$SpEd_per_stu)), 
+             data = SpEd2, 
+             linetype = 'dotted',
+             size = 0.8,
+             alpha = 1, 
+             color = "#29211F") +
+
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank(),
+         axis.title.y = element_blank(),
+        plot.title = element_text(size = 20)) +
+  annotate(geom = "label",
+           x = mean(SpEd2$SpEd_per_stu), 
+           y = 10, 
+           label = "US Average = 
+$ 644.68",
+           vjust = .5,
+           color = "#29211F",
+           size = 4)
+
+#Plotting the textbooks spending per single student by state
+textbooks2  %>%
+  ggplot(aes(book_per_stu, fct_reorder(STNAME, book_per_stu))) +
+  geom_col(aes(fill = Region),
+           alpha = 0.9) +
+  scale_fill_OkabeIto() + 
+  scale_x_continuous(expand = c(0, 0), 
+                     limits = c(0, 150),
+                     breaks = c(0, 25, 50, 75, 100, 125, 150))+ 
+                    # labels = c("0", "5K", "10K", "15K")) + 
+  labs(title = "Total Spending on Textbooks Per Single Student by State",
+       #y = "State",
+       x = "Total Yearly Spending on Textbooks Per Student, in USD",
+       caption = "Source: National Center for Education Statistics", 
+       fill = "Region") + 
+  geom_vline(aes(xintercept = mean(textbooks2$book_per_stu)), 
+             data = instruction2, 
+             linetype = 'dotted',
+             size = 0.8,
+             alpha = 1, 
+             color = "#29211F") +
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank(),
+         axis.title.y = element_blank(),
+        plot.title = element_text(size = 20)) +
+  annotate(geom = "label",
+           x = mean(textbooks2$book_per_stu), 
+           y = 10, 
+           label = "US Average = 
+$ 60.01",
+           vjust = .5,
+           color = "#29211F",
+           size = 4)
+```
+:::
+:::
