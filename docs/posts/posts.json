@@ -120,7 +120,7 @@
   },
   {
     "path": "posts/2022-03-09-geomjitter-mean-test-score-by-subgroup-and-test-by-state/",
-    "title": "geom_jitter: mean test score by subgroup and test by state",
+    "title": "geom_jitter: mean test score by students' subgroup and test(math or reading) by state",
     "description": "Plot showing mean test score by subgroup and test by state",
     "author": [
       {
@@ -130,15 +130,15 @@
     ],
     "date": "2022-03-09",
     "categories": [],
-    "contents": "\n\n\n\nRebecca\nResearch Question:\nHow do high school students’ subgroup makeup (i.e., Race/ethnicity, Male vs. Female, economically disadvantaged, Limited English, Migrant status, Disability status, and Homelessness) differ among states/regions?\nDesign choices:\nColor-blind friendly palette\nfaceted by state\nOnly used the mean proficiency scores for each\nExpanded height and width to accommodate the data\n\nFindings: No patterns emerged\n\n\n\n\n\n\n\nPlot\n\n\n\nPrior version\n\n\n\nCode\n\n\ndf_pivot %>%   \n  ggplot(aes(x = mean_pct, \n             y = fct_reorder(Subgroup, mean_pct))) +\n  geom_jitter(aes(color = test),\n              size = .9,\n              alpha = .8) +\n  facet_wrap(~STNAM.y) +\n  scale_color_discrete(l = 70,\n                       name = \"Test\",\n                       labels = c(\"Math\", \"Reading\")) +\n  labs(title = 'Mean percentage of students that scored at or above proficient in Math and Reading',\n       x = 'Mean percent proficient',\n       y = 'Group') +\n  theme_minimal() \n\n\n\n\n\n\n\n",
+    "contents": "\n\n\n\nRebecca\nResearch Question:\nHow do high school students’ subgroup makeup (i.e., Race/ethnicity, Male vs. Female, economically disadvantaged, Limited English, Migrant status, Disability status, and Homelessness) and mean test scores in math and reading differ among states/regions?\nDesign choices:\nColor-blind friendly palette\nfaceted by state\nOnly used the mean proficiency scores for each\nExpanded height and width to accommodate the data\n\nFindings: No patterns emerged expect math scores were on average lower than reading scores.\n\n\n\n\n\n\n\nPlot\n\n\n\nPrior version\n\n\n\nCode\n\n\ndf_pivot %>%   \n  ggplot(aes(x = mean_pct, \n             y = fct_reorder(Subgroup, mean_pct))) +\n  geom_jitter(aes(color = test),\n              size = .9,\n              alpha = .8) +\n  facet_wrap(~STNAM.y) +\n  scale_color_discrete(l = 70,\n                       name = \"Test\",\n                       labels = c(\"Math\", \"Reading\")) +\n  labs(title = 'Mean percentage of students that scored at or above proficient in Math and Reading',\n       x = 'Mean percent proficient',\n       y = 'Group') +\n  theme_minimal() \n\n\n\n\n\n\n\n",
     "preview": "posts/2022-03-09-geomjitter-mean-test-score-by-subgroup-and-test-by-state/geomjitter-mean-test-score-by-subgroup-and-test-by-state_files/figure-html5/rebecca-plots-1.png",
-    "last_modified": "2022-03-12T10:23:50-08:00",
-    "input_file": {}
+    "last_modified": "2022-03-14T10:35:18-07:00",
+    "input_file": "geomjitter-mean-test-score-by-subgroup-and-test-by-state.knit.md"
   },
   {
     "path": "posts/2022-03-09-geompoint-mean-test-score-by-subgroup-and-test/",
     "title": "geom_point: mean test score by subgroup and test",
-    "description": "Mean percentage of students that scored at or above proficient",
+    "description": "Mean percentage of students that scored at or above proficient in math and reading",
     "author": [
       {
         "name": "Rebecca Gordon",
@@ -147,14 +147,14 @@
     ],
     "date": "2022-03-09",
     "categories": [],
-    "contents": "\n\n\n\nRebecca\nResearch Question:\nHow do high school students’ subgroup makeup (i.e., Race/ethnicity, Male vs. Female, economically disadvantaged, Limited English, Migrant status, Disability status, and Homelessness) differ among states/regions?\nDesign choices:\nColor-blind friendly\nfaceted by subgroup\nMinimized size of points on the plot\nExpanded height and width to accommodate the data\n\nFindings: For nearly all states, homeless students scored 50% or lower in proficiency.\n\n\n\n\n\n\n\nPlot\n\n\n\nPrior version\n\n\n\nCode\n\n\n#Plot showing mean test score by subgroup and test\n\ndf_pivot %>%\n  ggplot(aes(x = mean_pct,\n             y = fct_reorder(STNAM.y, mean_pct),\n             fill = mean_pct,\n             color = test)) +\n  geom_point(size = .8,\n             alpha = .7) +\n  facet_wrap(~Subgroup) +\n  guides(fill = \"none\") +\n  scale_color_discrete(l = 45,\n                       name = \"Test\",\n                       labels = c(\"Math\", \"Reading\")) +\n  labs(title = 'Mean percentage of students that scored at or above proficient',\n       caption = 'In Math and Reading',\n       x = 'Mean percent proficient',\n       y = 'State') +\n  theme_minimal()\n\n\n\n\n\n\n\n",
+    "contents": "\n\n\n\nRebecca\nResearch Question:\nHow do high school students’ subgroup makeup (i.e., Race/ethnicity, Male vs. Female, economically disadvantaged, Limited English, Migrant status, Disability status, and Homelessness) and proficient test scores in math and reading differ among states/regions?\nDesign choices:\nColor-blind friendly\nfaceted by subgroup\nMinimized size of points on the plot\nExpanded height and width to accommodate the data\n\nFindings: For nearly all states, homeless students scored 50% or lower in proficiency.\nPrior version: I initially found this plot to not be very informative. However, when I made the points smaller I noticed that there was a pattern among students by subgroup.\n\n\n\n\n\n\n\nPlot\n\n\n\nPrior version\n\n\n\nCode\n\n\n#Plot showing mean test score by subgroup and test\n\ndf_pivot %>%\n  ggplot(aes(x = mean_pct,\n             y = fct_reorder(STNAM.y, mean_pct),\n             fill = mean_pct,\n             color = test)) +\n  geom_point(size = .9,\n             alpha = .7) +\n  facet_wrap(~Subgroup) +\n  guides(fill = \"none\") +\n  scale_color_discrete(l = 45,\n                       name = \"Test\",\n                       labels = c(\"Math\", \"Reading\")) +\n  labs(title = 'Mean percentage of students that scored at or above proficient',\n       caption = 'In Math and Reading',\n       x = 'Mean percent proficient',\n       y = 'State') +\n  theme_minimal()\n\n\n\n\n\n\n\n",
     "preview": "posts/2022-03-09-geompoint-mean-test-score-by-subgroup-and-test/geompoint-mean-test-score-by-subgroup-and-test_files/figure-html5/rebecca-plots-1.png",
-    "last_modified": "2022-03-12T10:23:50-08:00",
-    "input_file": {}
+    "last_modified": "2022-03-14T10:50:39-07:00",
+    "input_file": "geompoint-mean-test-score-by-subgroup-and-test.knit.md"
   },
   {
     "path": "posts/2022-03-09-ggridges-mean-test-score-by-state/",
-    "title": "ggridges: mean test score by state",
+    "title": "ggridges: mean test scores above or at proficent by state",
     "description": {},
     "author": [
       {
@@ -164,15 +164,15 @@
     ],
     "date": "2022-03-09",
     "categories": [],
-    "contents": "\n\n\n\nRebecca\nResearch Question:\nHow do high school students’ subgroup makeup (i.e., Race/ethnicity, Male vs. Female, economically disadvantaged, Limited English, Migrant status, Disability status, and Homelessness) differ among states/regions?\nDesign choices:\nColor-blind friendly gradient palette\nMy original idea was to show differences in test scores by gender (e.g. male and female). However, I decided to show all groups in one plot.\nExpanded height and width so that the axes are legible.\n\nFindings: There are no clear regional differences. Some eastern states have highest proficiency (Virginia and Maryland) and some have lowest (Rhode Island and New Hampshire).\n\n\n\n\n\n\n\nPlot\n\n\n\nPrior version\n\n\n\nCode\n\n\ndf_pivot %>%\n  ggplot(aes(x = mean_pct,\n             y = fct_reorder(STNAM.y, mean_pct),\n             fill = stat(x))) +\n  geom_density_ridges_gradient(scale = 2, size = 0.3, rel_min_height = 0.001) +\n  scale_fill_viridis_c(name = \"%\", option = \"C\") +\n  coord_cartesian(clip = \"off\") +\n  theme_ridges(grid = FALSE) +\n  labs(title = 'Mean percentage of students that scored at or above proficient',\n       x = 'Mean percent proficient',\n       y = 'State')\n\n\n\n\n\n\n\n",
+    "contents": "\n\n\n\nRebecca\nResearch Question:\nHow do high school students’ subgroup makeup (i.e., Race/ethnicity, Male vs. Female, economically disadvantaged, Limited English, Migrant status, Disability status, and Homelessness) differ among states/regions?\nDesign choices:\nColor-blind friendly gradient palette\nMy original idea was to show differences in test scores by gender (e.g. male and female). However, I decided to show all groups in one plot.\nExpanded height and width so that the axes are legible.\n\nFindings: There are no clear regional differences. Some eastern states have highest proficiency (Virginia and Maryland) and some have lowest (Rhode Island and New Hampshire).\nPrior versions: I initially wanted to show the ridge lines by state and thought that the gradient palette was very striking and visually representative of the mean proficient scores.\n\n\n\n\n\n\n\nPlot\n\n\n\nPrior version 1\n\n\n\nPrior version 2\n\n\n\nCode\n\n\ndf_pivot %>%\n  ggplot(aes(x = mean_pct,\n             y = fct_reorder(STNAM.y, mean_pct),\n             fill = stat(x))) +\n  geom_density_ridges_gradient(scale = 2, size = 0.3, rel_min_height = 0.001) +\n  scale_fill_viridis_c(name = \"%\", option = \"C\") +\n  coord_cartesian(clip = \"off\") +\n  theme_ridges(grid = FALSE) +\n  labs(title = 'Mean percentage of students that scored at or above proficient',\n       x = 'Mean percent proficient',\n       y = 'State')\n\n\n\n\n\n\n\n",
     "preview": "posts/2022-03-09-ggridges-mean-test-score-by-state/ggridges-mean-test-score-by-state_files/figure-html5/rebecca-plots-1.png",
-    "last_modified": "2022-03-12T10:23:50-08:00",
-    "input_file": {}
+    "last_modified": "2022-03-14T10:18:07-07:00",
+    "input_file": "ggridges-mean-test-score-by-state.knit.md"
   },
   {
     "path": "posts/2022-03-09-ggridges-mean-test-score-by-subgroup-and-test-by-region/",
     "title": "ggridges: mean test score by subgroup and test by region",
-    "description": {},
+    "description": "Mean test score above or at proficient grouped by regions in the United \tStates",
     "author": [
       {
         "name": "Rebecca Gordon",
@@ -181,10 +181,10 @@
     ],
     "date": "2022-03-09",
     "categories": [],
-    "contents": "\n\n\n\nRebecca\nResearch Question:\nHow do high school students’ subgroup makeup (i.e., Race/ethnicity, Male vs. Female, economically disadvantaged, Limited English, Migrant status, Disability status, and Homelessness) differ among states/regions?\nDesign choices:\nLightened the colors of the ridge lines so that they are more transparent.\n\nFindings: There are no clear regional differences. However, patterns among subgroups showed that children with disabilities and English learners scored lowest in proficiency. Thus, more resources should be provided to these students so they can have greater academic success.\n\n\n\n\n\n\n\nPlot\n\n\n\nPrior version\n\n\n\nCode\n\n\nggplot(df_pivot, aes(x = mean_pct, \n                     y = fct_reorder(Subgroup, mean_pct), \n                     fill = Region,\n                     alpha = .7)) +\n  guides(alpha = \"none\") +\n  geom_density_ridges(rel_min_height = 0.005) +\n  theme_minimal() +\n  labs(title = 'Mean percentage of students that scored at or above proficient in Math and Reading',\n       x = 'Mean percent proficient',\n       y = 'Group') \n\n\n\n\n\n\n\n",
+    "contents": "\n\n\n\nRebecca\nResearch Question:\nHow do high school students’ subgroup makeup (i.e., Race/ethnicity, Male vs. Female, economically disadvantaged, Limited English, Migrant status, Disability status, and Homelessness) and mean test scores in math and reading differ among states/regions?\nDesign choices:\nLightened the colors of the ridge lines so that they are more transparent.\n\nFindings: There are no clear regional differences. However, patterns among subgroups showed that children with disabilities and English learners scored lowest in test score proficiency. Thus, more resources should be provided to these students so they can have greater academic success.\n\n\n\n\n\n\n\nPlot\n\n\n\nPrior version\n\n\n\nCode\n\n\nggplot(df_pivot, aes(x = mean_pct, \n                     y = fct_reorder(Subgroup, mean_pct), \n                     fill = Region,\n                     alpha = .7)) +\n  guides(alpha = \"none\") +\n  geom_density_ridges(rel_min_height = 0.005) +\n  theme_minimal() +\n  labs(title = 'Mean percentage of students that scored at or above proficient in Math and Reading',\n       x = 'Mean percent proficient',\n       y = 'Group') \n\n\n\n\n\n\n\n",
     "preview": "posts/2022-03-09-ggridges-mean-test-score-by-subgroup-and-test-by-region/ggridges-mean-test-score-by-subgroup-and-test-by-region_files/figure-html5/rebecca-ridges-1.png",
-    "last_modified": "2022-03-12T10:23:50-08:00",
-    "input_file": {}
+    "last_modified": "2022-03-14T10:45:13-07:00",
+    "input_file": "ggridges-mean-test-score-by-subgroup-and-test-by-region.knit.md"
   },
   {
     "path": "posts/2022-03-09-gt-table-mean-test-scores-by-state/",
@@ -205,7 +205,7 @@
   },
   {
     "path": "posts/2022-03-09-maps-of-reading-and-math-scores/",
-    "title": "Maps of reading and math scores",
+    "title": "Maps of reading and math scores across the US states",
     "description": "United States maps of student scores above or at proficient in reading and math",
     "author": [
       {
@@ -215,9 +215,9 @@
     ],
     "date": "2022-03-09",
     "categories": [],
-    "contents": "\n\n\n\nRebecca\nResearch Question:\nHow do high school students’ subgroup makeup (i.e., Race/ethnicity, Male vs. Female, economically disadvantaged, Limited English, Migrant status, Disability status, and Homelessness) differ among states/regions?\nDesign choices:\nColor-blind friendly palette\nfaceted by subgroup\nremoved legend for clarity\nDid not add state names to avoid cognitive overload\n\nFindings: Homeless students have overall lower proficiency across math and reading while white students have the highest proficiency.\n\n\n\n\n\n\n\n\n\n\nReading and Math\n\n\n\nMath only\n\n\n\nReading only\n\n\n\nPrior versions\n\n\n\n\n\n\n\n",
+    "contents": "\n\n\n\nRebecca\nResearch Question:\nHow do high school students’ subgroup makeup (i.e., Race/ethnicity, Male vs. Female, economically disadvantaged, Limited English, Migrant status, Disability status, and Homelessness) and mean test scores in math and reading differ among states/regions?\nDesign choices:\nColor-blind friendly palette\nfaceted by subgroup\nremoved legend for clarity\nDid not add state names to avoid cognitive overload\n\nFindings: Homeless students have overall lower proficiency across math and reading while white students have the highest proficiency.\nPrior versions:\nI wanted the color palette to show contrast of subgroups so I used the viridis palette to show proficient test scores.\nI had planned to facet by subgroup in the so that was the first design choice I made in the data wrangling phase.\nI added breaks to show cut-offs for percentages and re-labeled the legend\nI made aesthetic changes to remove state outlines\n\n\n\n\n\n\n\n\n\n\n\nReading and Math\n\n\n\nMath only\n\n\n\nReading only\n\n\n\nPrior versions\n\n\n\n\n\n\n\n",
     "preview": "posts/2022-03-09-maps-of-reading-and-math-scores/maps-of-reading-and-math-scores_files/figure-html5/panel-chunk-1.png",
-    "last_modified": "2022-03-12T10:23:50-08:00",
-    "input_file": {}
+    "last_modified": "2022-03-14T10:40:09-07:00",
+    "input_file": "maps-of-reading-and-math-scores.knit.md"
   }
 ]
