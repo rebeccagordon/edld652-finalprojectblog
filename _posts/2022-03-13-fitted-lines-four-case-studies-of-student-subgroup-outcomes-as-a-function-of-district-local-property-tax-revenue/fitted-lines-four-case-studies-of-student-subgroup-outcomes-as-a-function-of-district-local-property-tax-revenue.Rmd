@@ -1,0 +1,535 @@
+---
+title: "fitted lines: regional case studies of student race/ethnicity subgroup outcomes"
+description: |
+  The relationship between student reading outcomes and district property tax revenue for race and ethnicity subgroups was evaluated for a subset of four states, representing every US Census region. 
+author:
+  - name: Amy Warnock
+date: 2022-03-13
+output:
+  distill::distill_article:
+    self_contained: false
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      eval = TRUE,
+                      message = FALSE,
+                      warning = FALSE)
+
+library(edld652)
+library(tidyverse)
+library(here)
+library(janitor)
+library(rio)
+library(colorspace)
+library(colorblindr)
+library(wesanderson)
+```
+
+```{r load-data}
+rlalea_10 <- get_data("EDFacts_rla_achievement_lea_2010_2019")
+
+fiscal2010 <- get_data("NCES_CCD_fiscal_district_2010")
+
+regions <- import(here("data", "us_census_bureau_regions_and_divisions.csv"), 
+									setclass = "tbl_df") %>% 
+	rename(`STNAME` = State,
+				 STABBR = `State Code`) 
+```
+
+#### Amy
+**Research Question:** 
+
+What is the relationship between district revenue from property taxes and reading outcomes for race and ethnicity subgroups? (I narrowed this to a subset of four states, one from each US Census region.)
+
+**Design choices:**
+
+-  Fitted linear regression lines by student race/ethnicity subgroup with scatterplot retained, using transparency and color to emphasize fitted lines
+-  Improved cognitive load by minimizing graph elements, such as shading, axis breaks, and grid lines
+-  Selected Okabe Ito palette, which is color-blind friendly
+-  Clear, succinct, and polished title and labels
+-  Log transformation of the x-axis so that the points weren't clustered at the lower end of the range
+	
+**Intended audience:** 
+
+Researchers and policy makers. 
+
+**Final Plots** 
+
+```{r cleaning-wrangling}
+# Selected columns of interest. Filtered so that rows with suppressed values (e.g., -9, -2) for key variables of interest weren't included. 
+
+viz3_fiscal2010 <- fiscal2010 %>% 
+  select(LEAID, NAME, STABBR, CENSUSID, V33,
+         TOTALREV, TFEDREV, TSTREV, TLOCREV, T06) %>% 
+  filter(V33 >= 0, TLOCREV >= 0, T06 >= 0) %>%
+  rename_with(tolower) %>% 
+  rename(totalstu = v33, tlocrevtaxes = t06) %>% 
+  mutate(locrev_stu = tlocrev / totalstu,
+         locrevtaxes_stu = tlocrevtaxes / totalstu)
+
+# Remove Inf values
+
+viz3_fiscal2010 <- viz3_fiscal2010 %>% 
+  mutate_if(is.numeric, list(~na_if(., Inf)))
+
+# Narrowed the RLA 2010 file down to variables of interest. Selected percent proficient variables across all grades (00) for race ethnicity, disability, English Language Learner status, and economically disadvantaged subgroups. Transformed variable names to be lowercase, transformed state names to be title case, and replaced the suppressed values (e.g., PS, n/a, etc.) with NA.
+
+viz3_rlalea00 <- rlalea_10 %>% 
+  select(YEAR, 
+         STNAM, 
+         FIPST,
+         LEAID, 
+         ALL_RLA00PCTPROF, 
+         MAM_RLA00PCTPROF,
+         MAS_RLA00PCTPROF,
+         MBL_RLA00PCTPROF,
+         MHI_RLA00PCTPROF,
+         MTR_RLA00PCTPROF, 
+         MWH_RLA00PCTPROF,
+         CWD_RLA00PCTPROF,
+         ECD_RLA00PCTPROF,
+         LEP_RLA00PCTPROF) %>% 
+  rename_with(tolower) %>% 
+  mutate(stnam = str_to_title(stnam), 
+         (across(all_rla00pctprof:lep_rla00pctprof, 
+                 ~replace(., . %in% c("PS", 
+                                      "n/a",	
+                                      "LT50",	
+                                      "LE5",	
+                                      "LE20",	
+                                      "LE10",	
+                                      "GE99",	
+                                      "GE95",	
+                                      "GE90",	
+                                      "GE80",	
+                                      "GE50"), NA))))
+
+# Next step was cleaning the percentage columns to change percentage ranges to average percentages. I used the method Daniel used on the course data webpage and applied it to all subgroups.
+
+# All = across all students
+
+viz3_rlalea00 <- viz3_rlalea00 %>% 
+  tidyr::separate(all_rla00pctprof, c("all_lower", "all_upper"), sep = "-") %>% 
+  mutate(
+    all_upper = ifelse(is.na(all_upper), all_lower, all_upper),
+    all_lower = as.numeric(all_lower),
+    all_upper = as.numeric(all_upper)
+    ) %>% 
+  rowwise() %>% 
+  mutate(meanpctprof_all = mean(c(all_lower, all_upper))) %>% 
+  ungroup()
+
+# mam = American Indian/Alaska Native
+
+viz3_rlalea00 <- viz3_rlalea00 %>% 
+  tidyr::separate(mam_rla00pctprof, c("mam_lower", "mam_upper"), sep = "-") %>% 
+  mutate(
+    mam_upper = ifelse(is.na(mam_upper), mam_lower, mam_upper),
+    mam_lower = as.numeric(mam_lower),
+    mam_upper = as.numeric(mam_upper)
+    ) %>% 
+  rowwise() %>% 
+  mutate(meanpctprof_mam = mean(c(mam_lower, mam_upper))) %>% 
+  ungroup()
+
+# mas = Asian/Pacific Islander
+
+viz3_rlalea00 <- viz3_rlalea00 %>% 
+  tidyr::separate(mas_rla00pctprof, c("mas_lower", "mas_upper"), sep = "-") %>% 
+  mutate(
+    mas_upper = ifelse(is.na(mas_upper), mas_lower, mas_upper),
+    mas_lower = as.numeric(mas_lower),
+    mas_upper = as.numeric(mas_upper)
+    ) %>% 
+  rowwise() %>% 
+  mutate(meanpctprof_mas = mean(c(mas_lower, mas_upper))) %>% 
+  ungroup()
+
+# mbl = Black
+
+viz3_rlalea00 <- viz3_rlalea00 %>% 
+  tidyr::separate(mbl_rla00pctprof, c("mbl_lower", "mbl_upper"), sep = "-") %>% 
+  mutate(
+    mbl_upper = ifelse(is.na(mbl_upper), mbl_lower, mbl_upper),
+    mbl_lower = as.numeric(mbl_lower),
+    mbl_upper = as.numeric(mbl_upper)
+    ) %>% 
+  rowwise() %>% 
+  mutate(meanpctprof_mbl = mean(c(mbl_lower, mbl_upper))) %>% 
+  ungroup()
+
+# mhi = Hispanic/Latino
+
+viz3_rlalea00 <- viz3_rlalea00 %>% 
+  tidyr::separate(mhi_rla00pctprof, c("mhi_lower", "mhi_upper"), sep = "-") %>% 
+  mutate(
+    mhi_upper = ifelse(is.na(mhi_upper), mhi_lower, mhi_upper),
+    mhi_lower = as.numeric(mhi_lower),
+    mhi_upper = as.numeric(mhi_upper)
+    ) %>% 
+  rowwise() %>% 
+  mutate(meanpctprof_mhi = mean(c(mhi_lower, mhi_upper))) %>% 
+  ungroup()
+
+# mtr = Multiracial
+
+viz3_rlalea00 <- viz3_rlalea00 %>% 
+  tidyr::separate(mtr_rla00pctprof, c("mtr_lower", "mtr_upper"), sep = "-") %>% 
+  mutate(
+    mtr_upper = ifelse(is.na(mtr_upper), mtr_lower, mtr_upper),
+    mtr_lower = as.numeric(mtr_lower),
+    mtr_upper = as.numeric(mtr_upper)
+    ) %>% 
+  rowwise() %>% 
+  mutate(meanpctprof_mtr = mean(c(mtr_lower, mtr_upper))) %>% 
+  ungroup()
+
+# mwh = White
+
+viz3_rlalea00 <- viz3_rlalea00 %>% 
+  tidyr::separate(mwh_rla00pctprof, c("mwh_lower", "mwh_upper"), sep = "-") %>% 
+  mutate(
+    mwh_upper = ifelse(is.na(mwh_upper), mwh_lower, mwh_upper),
+    mwh_lower = as.numeric(mwh_lower),
+    mwh_upper = as.numeric(mwh_upper)
+    ) %>% 
+  rowwise() %>% 
+  mutate(meanpctprof_mwh = mean(c(mwh_lower, mwh_upper))) %>% 
+  ungroup()
+
+# cwd = children with disabilities
+
+viz3_rlalea00 <- viz3_rlalea00 %>% 
+  tidyr::separate(cwd_rla00pctprof, c("cwd_lower", "cwd_upper"), sep = "-") %>% 
+  mutate(
+    cwd_upper = ifelse(is.na(cwd_upper), cwd_lower, cwd_upper),
+    cwd_lower = as.numeric(cwd_lower),
+    cwd_upper = as.numeric(cwd_upper)
+    ) %>% 
+  rowwise() %>% 
+  mutate(meanpctprof_cwd = mean(c(cwd_lower, cwd_upper))) %>% 
+  ungroup()
+
+# ecd = economically disadvantaged
+
+viz3_rlalea00 <- viz3_rlalea00 %>% 
+  tidyr::separate(ecd_rla00pctprof, c("ecd_lower", "ecd_upper"), sep = "-") %>% 
+  mutate(
+    ecd_upper = ifelse(is.na(ecd_upper), ecd_lower, ecd_upper),
+    ecd_lower = as.numeric(ecd_lower),
+    ecd_upper = as.numeric(ecd_upper)
+    ) %>% 
+  rowwise() %>% 
+  mutate(meanpctprof_ecd = mean(c(ecd_lower, ecd_upper))) %>% 
+  ungroup()
+
+# lep = limited English proficiency (English Language Learner)
+
+viz3_rlalea00 <- viz3_rlalea00 %>% 
+  tidyr::separate(lep_rla00pctprof, c("lep_lower", "lep_upper"), sep = "-") %>% 
+  mutate(
+    lep_upper = ifelse(is.na(lep_upper), lep_lower, lep_upper),
+    lep_lower = as.numeric(lep_lower),
+    lep_upper = as.numeric(lep_upper)
+    ) %>% 
+  rowwise() %>% 
+  mutate(meanpctprof_lep = mean(c(lep_lower, lep_upper))) %>% 
+  ungroup()
+
+# Got rid of the "_lower" and "_upper" percentage columns since they won't be needed
+
+viz3_rlalea00 <- viz3_rlalea00 %>% 
+  select(year, 
+         stnam, 
+         fipst,
+         leaid,
+         contains("meanpctprof"))
+
+# Pivoted the dataset longer to have a column for subgroup and a column for mean percentage proficient. 
+
+viz3_rlalea00_long <- viz3_rlalea00 %>%
+  pivot_longer(
+ 		cols = contains("meanpctprof"),
+ 		names_to = "subgroup",
+ 		values_to = "meanpctprof",
+ 		names_prefix = "meanpctprof_") 
+
+# Joined the long file with the cleaned/narrowed fiscal data file. Used an inner join because I'm only interested in LEAs that have both student proficiency and fiscal data. 
+
+viz3_rla00long_fiscal_2010 <- inner_join(viz3_rlalea00_long, 
+                                         viz3_fiscal2010, 
+                                         by = "leaid")
+
+# Merge with census data, which includes region
+
+viz3_rla00long_fiscal_2010 <- left_join(viz3_rla00long_fiscal_2010,
+                                               regions, 
+                                               by = c("stnam" = "STNAME"))
+```
+
+```{r panelset}
+xaringanExtra::use_panelset()
+```
+
+::: l-body-outset
+
+::::: {.panelset}
+
+::: {.panel}
+
+## California {.panel-name}
+```{r panel-ca, layout = "l-body-outset", fig.height = 6, fig.width = 8}
+viz3_rla00long_fiscal_2010 %>% 
+  filter(stnam == "California") %>% 
+  filter(subgroup != "all" & subgroup != "cwd" & 
+           subgroup != "ecd" & subgroup != "lep" &
+           subgroup != "mtr") %>% 
+  filter(locrevtaxes_stu > 0) %>% 
+  ggplot() +
+  geom_point(aes(x = locrevtaxes_stu, y = meanpctprof), color = "gray90", stroke = 0, alpha = .6) +
+  geom_smooth(method = lm, se = FALSE, 
+              aes(x = locrevtaxes_stu, y = meanpctprof, color = subgroup)) +
+  scale_x_log10(breaks = c(100, 1000, 10000),
+                labels = c("$100", "$1,000", "$10,000")) +
+  scale_y_continuous(expand = c(0,0), 
+                     breaks = c(0, 25, 50, 75, 100),
+                     labels = c("0%", "25%", "50%", "75%","100%")) + 
+  coord_cartesian(ylim = c(0, 100)) +
+  scale_color_OkabeIto(name = "Race/Ethnicity",
+                       breaks = c("mam", "mas", "mbl", "mhi", "mwh"),
+                       labels = c("American Indian/Alaska Native", 
+                                  "Asian/Pacific Islander", "Black", 
+                                  "Hispanic/Latino", "White")) + 
+  labs(title = "Local Revenue from Property Taxes and RLA Proficiency",
+       subtitle = "California",
+       y = "Average percent proficient",
+       x = "Dollar per student",
+       caption = "Source: National Center for Education Statistics, 2010") +
+  theme_minimal(15) +
+  theme(plot.title.position = "plot",
+        panel.grid.minor.y = element_blank(),
+        panel.grid.minor.x = element_blank())
+```
+:::
+
+::: {.panel}
+
+## Michigan {.panel-name}
+```{r panel-mi, layout = "l-body-outset", fig.height = 6, fig.width = 8}
+viz3_rla00long_fiscal_2010 %>% 
+  filter(stnam == "Michigan") %>% 
+  filter(subgroup != "all" & subgroup != "cwd" & 
+           subgroup != "ecd" & subgroup != "lep" &
+           subgroup != "mtr") %>% 
+  filter(locrevtaxes_stu > 0) %>% 
+  ggplot() +
+  geom_point(aes(x = locrevtaxes_stu, y = meanpctprof), color = "gray90", stroke = 0, alpha = .6) +
+  geom_smooth(method = lm, se = FALSE, 
+              aes(x = locrevtaxes_stu, y = meanpctprof, color = subgroup)) +
+  scale_x_log10(breaks = c(300, 1000, 3000, 10000),
+                labels = c("$300", "$1,000", "$3,000", "$10,000")) +
+  scale_y_continuous(expand = c(0,0),
+                     breaks = c(0, 25, 50, 75, 100),
+                     labels = c("0%", "25%", "50%", "75%","100%")) + 
+  coord_cartesian(ylim = c(0, 100)) +  
+  scale_color_OkabeIto(name = "Race/Ethnicity",
+                       breaks = c("mam", "mas", "mbl", "mhi", "mwh"),
+                       labels = c("American Indian/Alaska Native", 
+                                  "Asian/Pacific Islander", "Black", 
+                                  "Hispanic/Latino", "White")) + 
+  labs(title = "Local Revenue from Property Taxes and RLA Proficiency",
+       subtitle = "Michigan",
+       y = "Average percent proficient",
+       x = "Dollar per student",
+       caption = "Source: National Center for Education Statistics, 2010") +
+  theme_minimal(15) +
+  theme(plot.title.position = "plot",
+        panel.grid.minor.y = element_blank(),
+        panel.grid.minor.x = element_blank())
+```
+
+::: 
+
+::: {.panel}
+
+## Louisiana {.panel-name}
+```{r panel-la, layout = "l-body-outset", fig.height = 6, fig.width = 8}
+viz3_rla00long_fiscal_2010 %>% 
+  filter(stnam == "Louisiana") %>% 
+  filter(subgroup != "all" & subgroup != "cwd" & 
+           subgroup != "ecd" & subgroup != "lep" &
+           subgroup != "mtr") %>%  
+  filter(locrevtaxes_stu > 0) %>% 
+  ggplot() +
+  geom_point(aes(x = locrevtaxes_stu, y = meanpctprof), color = "gray90", stroke = 0, alpha = .6) +
+  geom_smooth(method = lm, se = FALSE, 
+              aes(x = locrevtaxes_stu, y = meanpctprof, color = subgroup)) +
+  scale_x_log10(breaks = c(300, 1000, 3000, 10000),
+                labels = c("$300", "$1,000", "$3,000", "$10,000")) +
+  scale_y_continuous(breaks = c(0, 25, 50, 75, 100),
+                     labels = c("0%", "25%", "50%", "75%","100%")) + 
+  coord_cartesian(ylim = c(0, 100)) +
+  scale_color_OkabeIto(name = "Race/Ethnicity",
+                       breaks = c("mam", "mas", "mbl", "mhi", "mwh"),
+                       labels = c("American Indian/Alaska Native", 
+                                  "Asian/Pacific Islander", "Black", 
+                                  "Hispanic/Latino", "White")) +  
+  labs(title = "Local Revenue from Property Taxes and RLA Proficiency",
+       subtitle = "Lousiana",
+       y = "Average percent proficient",
+       x = "Dollar per student",
+       caption = "Source: National Center for Education Statistics, 2010") +
+  theme_minimal(15) +
+  theme(plot.title.position = "plot",
+        panel.grid.minor.y = element_blank(),
+        panel.grid.minor.x = element_blank())
+```
+
+::: 
+
+::: {.panel}
+
+## New Jersey {.panel-name}
+```{r panel-nj, layout = "l-body-outset", fig.height = 6, fig.width = 8}
+viz3_rla00long_fiscal_2010 %>% 
+  filter(stnam == "New Jersey") %>% 
+  filter(subgroup != "all" & subgroup != "cwd" & 
+           subgroup != "ecd" & subgroup != "lep" &
+           subgroup != "mtr") %>% 
+  filter(locrevtaxes_stu > 0) %>% 
+  ggplot() +
+  geom_point(aes(x = locrevtaxes_stu, y = meanpctprof), color = "gray90", stroke = 0, alpha = .6) +
+  geom_smooth(method = lm, se = FALSE, 
+              aes(x = locrevtaxes_stu, y = meanpctprof, color = subgroup)) +
+  scale_x_log10(breaks = c(1000, 3000, 10000, 30000),
+                labels = c("$1,000", "$3,000", "$10,000", "$30,000")) +
+  scale_y_continuous(expand = c(0,0),
+                     breaks = c(0, 25, 50, 75, 100),
+                     labels = c("0%", "25%", "50%", "75%","100%")) + 
+  coord_cartesian(ylim = c(0, 100)) +  
+  scale_color_OkabeIto(name = "Race/Ethnicity",
+                       breaks = c("mam", "mas", "mbl", "mhi", "mwh"),
+                       labels = c("American Indian/Alaska Native", 
+                                  "Asian/Pacific Islander", "Black", 
+                                  "Hispanic/Latino", "White")) + 
+  labs(title = "Local Revenue from Property Taxes and RLA Proficiency",
+       subtitle = "New Jersey",
+       y = "Average percent proficient",
+       x = "Dollar per student",
+       caption = "Source: National Center for Education Statistics, 2010") +
+  theme_minimal(15) +
+  theme(plot.title.position = "plot",
+        panel.grid.minor.y = element_blank(),
+        panel.grid.minor.x = element_blank())
+```
+
+::: 
+
+:::::
+
+:::
+
+**Findings and Observations:**
+
+-  California: There appears to be a positive relationship between district revenue from property taxes and the percent of students attaining proficiency on reading assessments for all student subgroups. Overall, the strength of this relationship appears similar but is perhaps somewhat stronger for students reported as Asian/Pacific Islander and weaker in strength for students reported as American Indian/Alaska Native. 
+-  Michigan: The fitted lines for White, Hispanic/Latino, and American Indian/Alaska Native subgroups have slight positive slopes, indicating that percent proficiency for these subgroups does not increase based on an increase in funding from property taxes. The fitted lines for Black and Asian/Pacific Islander subgroups are steeper, indicating a stronger association. 
+-  Louisiana: There appears to be a moderate positive association between property tax revenue for all student subgroups except students reported as American Indian/Alaska Native. It appears that the percentage of American Indian/Alaska Native students scoring at or above proficient on reading assessments does not increase with an increase in funding from property taxes.
+-  New Jersey: There appears to be a strong relationship in funding from property taxes and student proficiency in reading for all subgroups except American Indian/Alaska Native students. The association between funding and proficiency for American Indian/Alaska Native students appears to be strongly negative. I did not get to this, but it would be worth examining the number of districts that reported proficiency data for this subgroup compared to other subgroups.  
+
+**Prior Versions** 
+
+:::l-body-outset
+
+::::: {.panelset}
+
+::: {.panel}
+
+## Prior Version 1 {.panel-name}
+
+```{r panel-prior1, layout = "l-body-outset", fig.height = 10, fig.width = 14}
+viz3_rla00long_fiscal_2010 %>% 
+  filter(locrevtaxes_stu > 0) %>% 
+  ggplot() +
+  geom_smooth(method = lm, se = FALSE, 
+              aes(x = locrevtaxes_stu, y = meanpctprof, color = subgroup)) +
+  facet_wrap(~stnam) +
+  scale_x_log10(labels = scales::dollar) +
+  labs(title = "Local Revenue from Property Taxes and RLA Proficiency",
+       y = "Approximate Average Percent Proficient",
+       x = "Dollar per Student",
+       caption = "Source: National Center for Education Statistics, 2010") +
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        panel.grid.minor.y = element_blank(),
+        panel.grid.minor.x = element_blank())
+```
+:::
+
+::: {.panel}
+## Prior Version 2 {.panel-name}
+```{r panel-prior2, layout = "l-body-outset", fig.height = 10, fig.width = 10}
+viz3_rla00long_fiscal_2010 %>% 
+  filter(stnam == "California") %>% 
+  filter(subgroup != "all" & subgroup != "cwd" & 
+           subgroup != "ecd" & subgroup != "lep" &
+           subgroup != "mtr") %>%  
+  filter(locrevtaxes_stu > 0) %>% 
+  ggplot() +
+    geom_point(aes(x = locrevtaxes_stu, y = meanpctprof), alpha = .1) +
+  geom_smooth(method = lm, se = FALSE, 
+              aes(x = locrevtaxes_stu, y = meanpctprof, color = subgroup)) +
+  scale_x_log10() +
+  scale_color_manual(values = wes_palette("Cavalcanti1", n =5)) +
+  labs(title = "Local Revenue from Property Taxes and RLA Proficiency",
+       y = "Average percent proficient",
+       x = "Dollar per student",
+       caption = "Source: National Center for Education Statistics, 2010") +
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        panel.grid.minor.y = element_blank(),
+        panel.grid.minor.x = element_blank())
+```
+:::
+
+::: {.panel}
+## Prior Version 3 {.panel-name}
+```{r panel-prior3, layout = "l-body-outset", fig.height = 10, fig.width = 10}
+cavalcanti <- viz3_rla00long_fiscal_2010 %>% 
+  filter(stnam == "California") %>% 
+  filter(subgroup != "all" & subgroup != "cwd" & 
+           subgroup != "ecd" & subgroup != "lep" &
+           subgroup != "mtr") %>%  
+  filter(locrevtaxes_stu > 0) %>% 
+  ggplot() +
+    geom_point(aes(x = locrevtaxes_stu, y = meanpctprof), alpha = .1) +
+  geom_smooth(method = lm, se = FALSE, 
+              aes(x = locrevtaxes_stu, y = meanpctprof, color = subgroup)) +
+  scale_x_log10() +
+  scale_color_manual(values = wes_palette("Cavalcanti1", n =5)) +
+  labs(title = "Local Revenue from Property Taxes and RLA Proficiency",
+       y = "Average percent proficient",
+       x = "Dollar per student",
+       caption = "Source: National Center for Education Statistics, 2010") +
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        panel.grid.minor.y = element_blank(),
+        panel.grid.minor.x = element_blank())
+
+colorblindr::cvd_grid(cavalcanti)
+```
+:::
+
+:::::
+
+:::
+
+**Evolution of plots over time:** 
+
+-  Prior Version 1 is a broad preliminary exploratory visualization across all states. I fitted linear regressions lines to student subgroups, including race/ethnicity, English Learners, students with disabilities, economically disadvantaged students, and students overall.
+-  From the broad exploration, I narrowed the scope to one state from each US Census region. Prior Version 2 displays the relationship between district revenue from property taxes and outcomes of student race/ethnicity subgroups for districts in the state of California. I tried a color palette from the Wes Anderson palette.
+-  Unlike the color palette I used for the bar plots, this color palette was not colorblind-friendly (Prior Version 3). 
+-  Between this version and the final version, I shifted to using the Okabe Ito palette, adjusted the color and transparency of the scatterplot points, removed the outlines from the points, and refined the color legend. 
+ 
+

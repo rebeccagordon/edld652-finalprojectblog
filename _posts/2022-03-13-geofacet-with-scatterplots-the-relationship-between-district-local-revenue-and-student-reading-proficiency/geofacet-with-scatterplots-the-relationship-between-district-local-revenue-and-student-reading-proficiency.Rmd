@@ -1,7 +1,7 @@
 ---
-title: "maps: average local revenue of districts across the US"
+title: "geo_facet with scatterplots: the relationship between local revenue and student reading proficiency"
 description: |
-  Maps illustrating average district total local revenue and average district local reveneue from property taxes in each state.
+  Scatterplots for each state illustrating the relationship between district local revenue (total and from property taxes) and student reading/language arts profiency.
 author:
   - name: Amy Warnock
 date: 2022-03-13
@@ -9,7 +9,6 @@ output:
   distill::distill_article:
     self_contained: false
 ---
-
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE,
@@ -22,14 +21,8 @@ library(tidyverse)
 library(here)
 library(janitor)
 library(rio)
-library(viridis)
-library(albersusa)
-#install.packages("usmap")
-library(usmap)
-#install.packages("scico")
-library(scico)
-library(scales)
-library(colorspace)
+#install.packages("geofacet")
+library(geofacet)
 ```
 
 ```{r load-data}
@@ -46,20 +39,21 @@ regions <- import(here("data", "us_census_bureau_regions_and_divisions.csv"),
 #### Amy
 **Research Question:** 
 
-What is the average district local revenue and district revenue from property taxes in each state?  
+What is the relationship between district funding (both total local revenue and local revenue from property taxes) and outcomes by state?
 
 **Design choices:**
 
--  Choropleths instead of bar graphs for communicating average district local revenue (total and from property taxes)
--  Improved cognitive load by minimizing graph elements, such as background shading and longitude/latitude grid lines
--  Selected a color palette composed of muted, natural colors that is also color-blind friendly
--  Selected ordering of color palette from light to dark as it emphasized the Northeast more effectively than dark to light
--  Customized fill color for states with missing data
+-  Scatterplots enable the audience to observe the strength and direction of the association between two variables, as well as the spread, number of observations, and potentially type of relationship (e.g., linear, quadratic).
+-  Using `geo_facet()` organized the scatterplots in the approximate shape of the United States (instead of alphabetically). 
+-  Improved cognitive load by minimizing graph elements, such as shading, axis breaks, and grid lines
+-  Selected a muted color for geom_points that was cohesive with the colors in the other plots I created
+-  Used transparency with `geom_point()` to allow the audience to see the density of observations
 -  Clear, succinct, and polished title and labels
+-  Log transformation of the x-axis so that the points weren't clustered at the lower end of the range
 	
 **Intended audience:** 
 
-Originally intended for researchers and policy makers. Upon reflection, I think these plots would be appropriate for a more general audience as well. 
+Researchers and policy makers. 
 
 **Final Plots** 
 
@@ -275,72 +269,63 @@ viz3_rla00long_fiscal_2010 <- left_join(viz3_rla00long_fiscal_2010,
                                                by = c("stnam" = "STNAME"))
 ```
 
-```{r df-prep}
-viz3_map_dfprep <- viz3_rla00long_fiscal_2010 %>% 
-  filter(subgroup == "all") %>% 
-  group_by(stnam) %>% 
-  summarize(mean_locrev_stu = mean(locrev_stu, na.rm = TRUE),
-            mean_locrevtaxes_stu = mean(locrevtaxes_stu, na.rm = TRUE))
-
-viz3_us <- usa_sf() 
-
-viz3_map_df <- left_join(viz3_us,
-                         viz3_map_dfprep,
-                         by = c("name" = "stnam"))
-```
-
 ```{r panelset}
 xaringanExtra::use_panelset()
 ```
 
-::: l-body-outset
+::: l-page
 
 ::::: {.panelset}
 
 ::: {.panel}
 
-## Total Local Revenue {.panel-name}
-```{r panel-locrev, layout = "l-body-outset", fig.height = 10, fig.width = 10}
-viz3_map_df %>% 
-ggplot(aes(geometry = geometry, 
-           fill = mean_locrev_stu,
-           color = "transparent")) +
-  geom_sf(color = "#7d7373", size = 0.08) +
-  scale_fill_continuous_sequential(palette = "lajolla",
-                                   rev = TRUE,
-                                   na.value = "#b1aaaa",
-                                   name = "Dollar per student",
-                                   breaks = c(3000, 6000, 
-                                              9000, 12000, 15000),
-                                   labels = c("$3,000", "$6,000", "$9,000",
-                                              "$12,000", "$15,000")) + 
-  theme_void(15) +
-  labs(title = "Average District Local Revenue",
-       caption = "Source: National Center for Education Statistics, 2010") +
-  theme(plot.title.position = "plot")
+## Local Revenue x Reading Proficiency {.panel-name}
+```{r panel-locrev, layout = "l-page", fig.height = 8, fig.width = 14}
+viz3_rla00long_fiscal_2010 %>% 
+  filter(subgroup == "all") %>% 
+  filter(locrev_stu > 0) %>% 
+  ggplot(aes(x = locrev_stu, y = meanpctprof)) +
+  facet_geo(~stnam) +
+  geom_point(color = "#446455", stroke = 0, alpha = .5) + 
+  scale_x_log10(breaks = c(10, 1000, 100000),
+                labels = c("$10", "$1k", "$100k")) +
+  scale_y_continuous(breaks = c(0, 25, 50, 75, 100),
+                     labels = c("0%", "25%", "50%", "75%", "100%")) +
+  labs(title = "Relationship Between Total Local Revenue and RLA Proficiency",
+       y = "Average percent proficient",
+       x = "Dollar per student",
+       caption = "Note the scale of the x-axis. 
+       Source: National Center for Education Statistics, 2010") +
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        panel.grid.minor.y = element_blank(),
+        panel.grid.minor.x = element_blank()) 
 ```
 :::
 
 ::: {.panel}
 
-## Local Revenue from Property Taxes {.panel-name}
-```{r panel-locrevtaxes, layout = "l-body-outset", fig.height = 10, fig.width = 10}
-viz3_map_df %>% 
-  ggplot(aes(geometry = geometry, fill = mean_locrevtaxes_stu)) +
-  geom_sf(color = "#7d7373", size = 0.08) +
-  scale_fill_continuous_sequential(palette = "lajolla",
-                                   rev = TRUE,
-                                   na.value = "#b1aaaa",
-                                   name = "Dollar per student",
-                                   breaks = c(2500, 5000, 7500, 10000),
-                                   labels = c("$2,500", 
-                                              "$5,000", 
-                                              "$7,500", 
-                                              "$10,000")) + 
-  theme_void(15) +
-  labs(title = "Average District Local Revenue from Property Taxes",
-       caption = "Source: National Center for Education Statistics, 2010") +
-  theme(plot.title.position = "plot")
+## Property Tax Revenue x Reading Proficiency {.panel-name}
+```{r panel-locrevtaxes, layout = "l-page", fig.height = 8, fig.width = 14}
+viz3_rla00long_fiscal_2010 %>% 
+  filter(subgroup == "all") %>% 
+  filter(locrevtaxes_stu > 0) %>% 
+  ggplot(aes(x = locrevtaxes_stu, y = meanpctprof)) +
+  facet_geo(~stnam) +
+  geom_point(color = "#446455", stroke = 0, alpha = .5) + 
+  scale_x_log10(breaks = c(10, 1000, 100000),
+                labels = c("$10", "$1k", "$100k")) +
+  scale_y_continuous(breaks = c(0, 25, 50, 75, 100),
+                     labels = c("0%", "25%", "50%", "75%", "100%")) +
+  labs(title = "Relationship Between Local Revenue from Property Taxes and RLA Proficiency",
+       y = "Average percent proficient",
+       x = "Dollar per student",
+       caption = "Note the scale of the x-axis. 
+       Source: National Center for Education Statistics, 2010") +
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        panel.grid.minor.y = element_blank(),
+        panel.grid.minor.x = element_blank())
 ```
 
 ::: 
@@ -351,10 +336,10 @@ viz3_map_df %>%
 
 **Findings and Observations:**
 
--  These maps use the same data as the bar plots but present the results in a different format. 
--  Some of the regional patterns are still readily observable with the map format (higher revenue in the Northeast, lower in the South). 
--  It is more difficult to make precise revenue comparisons between states. 
--  What is easier to observe on the maps in comparison to the bar plots is differences between average district local revenue and local revenue from property taxes. For example, Connecticut has the highest total local revenue but one of the lowest average revenues from property taxes. 
+-  Overall, total local revenue and revenue from property taxes are positively associated with the reading/language arts outcomes of students. 
+-  However, the strength of the association varies by state. 
+-  There are states where there doesn't appear to be a relationship between the variables (e.g., Colorado, Texas, Vermont).
+-  The relationship between local revenue and student reading proficiency appears to be strong in several states, including New Jersey. This state is notable as it has the highest average district local revenue from property taxes. Given more time and bandwidth, I would have liked to create a district-level choropleth of revenue in New Jersey (or even a bivariate map of property taxes and outcomes).
 
 **Prior Versions** 
 
@@ -367,114 +352,71 @@ viz3_map_df %>%
 ## Prior Version 1 {.panel-name}
 
 ```{r panel-prior1, layout = "l-body-outset", fig.height = 10, fig.width = 10}
-viz3_map_dfprep0 <- viz3_rla00long_fiscal_2010 %>% 
+viz3_rla00long_fiscal_2010 %>% 
   filter(subgroup == "all") %>% 
-  group_by(stnam) %>% 
-  summarize(mean_locrev_stu = mean(locrev_stu),
-            mean_locrevtaxes_stu = mean(locrevtaxes_stu))
-
-viz3_us <- usa_sf() 
-
-viz3_map_df0 <- left_join(viz3_map_dfprep, 
-                      viz3_us, 
-                      by = c("stnam" = "name"))
-
-viz3_map_df0 %>% 
-  ggplot(aes(geometry = geometry, fill = mean_locrev_stu)) +
-  geom_sf(color = "white", size = 0) +
-    scale_fill_viridis(option = "magma") +
-  theme_void() +
-  labs(title = "Average LEA Total Local Revenue",
-       caption = "Source: National Center for Education Statistics, 2010") +
-  theme(plot.title.position = "plot")
+  ggplot(aes(x = locrev_stu, y = meanpctprof)) +
+  geom_point() 
 ```
 :::
 
 ::: {.panel}
 ## Prior Version 2 {.panel-name}
 ```{r panel-prior2, layout = "l-body-outset", fig.height = 10, fig.width = 10}
-viz3_map_df %>% 
-  ggplot(aes(geometry = geometry, fill = mean_locrev_stu)) +
-  geom_sf(color = "white", size = 0) +
- 	scale_fill_viridis(option = "magma", 
- 	                   name = "Dollar per student",
- 										 breaks = c(0, 2500, 5000, 7500, 10000, 12500),
- 										 labels = c("$0", 
- 										            "$2,500", 
- 										            "$5,000", 
- 										            "$7,500", 
- 										            "$10,000",
- 										            "$12,500")) +
-  theme_void() +
-  labs(title = "Average LEA Total Local Revenue",
+viz3_rla00long_fiscal_2010 %>% 
+  filter(subgroup == "all") %>% 
+  ggplot(aes(x = locrev_stu, y = meanpctprof)) +
+  geom_point(color = "gray30", fill = "gray30", alpha = .4) + 
+  scale_x_log10(labels = scales::dollar) +
+  labs(title = "Relationship between Local Revenue and RLA Proficiency",
+       y = "Approximate Average Percent Proficient",
+       x = "Dollar per Student",
        caption = "Source: National Center for Education Statistics, 2010") +
-  theme(plot.title.position = "plot")
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        panel.grid.minor.y = element_blank(),
+        panel.grid.minor.x = element_blank())
 ```
 :::
 
 ::: {.panel}
 ## Prior Version 3 {.panel-name}
 ```{r panel-prior3, layout = "l-body-outset", fig.height = 10, fig.width = 10}
-viz3_map_df %>% 
-ggplot(aes(geometry = geometry, fill = mean_locrev_stu)) +
-  geom_sf(color = "white", size = 0.08) +
-  guides(fill = guide_colorsteps(barwidth = 15,
-                                 barheight = .5,
-                                 title.position = "top",
-                                 title.hjust = .5,
-                                 title = "Dollar per Student")) +
-  scale_fill_scico(palette = "bilbao", direction = 1) + 
-  theme_void() +
-  labs(title = "Average LEA Total Local Revenue",
+viz3_rla00long_fiscal_2010 %>% 
+  filter(subgroup == "all") %>% 
+  ggplot(aes(x = locrev_stu, y = meanpctprof)) +
+  geom_point(color = "#798E87", stroke = 0, alpha = .4) + 
+  scale_x_log10(labels = scales::dollar) +
+  labs(title = "Relationship between Local Revenue and RLA Proficiency",
+       y = "Approximate Average Percent Proficient",
+       x = "Dollar per Student",
        caption = "Source: National Center for Education Statistics, 2010") +
+  theme_minimal() +
   theme(plot.title.position = "plot",
-        legend.position = "bottom")
+        panel.grid.minor.y = element_blank(),
+        panel.grid.minor.x = element_blank())
 ```
 :::
 
 ::: {.panel}
 ## Prior Version 4 {.panel-name}
 ```{r panel-prior4, layout = "l-body-outset", fig.height = 10, fig.width = 10}
-viz3_map_df %>% 
-ggplot(aes(geometry = geometry, 
-           fill = mean_locrev_stu,
-           color = "transparent")) +
-  geom_sf(color = "#b1aaaa", size = 0.06) +
-  scale_fill_continuous_sequential(palette = "lajolla",
-                                   rev = FALSE,
-                                   na.value = "#b1aaaa",
-                                   name = "Dollar per student",
-                                   breaks = c(3000, 6000, 
-                                              9000, 12000, 15000),
-                                   labels = c("$3,000", "$6,000", "$9,000",
-                                              "$12,000", "$15,000")) + 
-  theme_void() +
-  labs(title = "Average District Local Revenue",
+viz3_rla00long_fiscal_2010 %>% 
+  filter(subgroup == "all") %>% 
+  filter(locrev_stu > 0) %>% 
+  ggplot(aes(x = locrev_stu, y = meanpctprof)) +
+  facet_wrap(~stnam) +
+  geom_point(color = "gray30", fill = "gray30", alpha = .4) + 
+  scale_x_log10(labels = scales::dollar) +
+  labs(title = "Total Local Revenue and RLA Proficiency",
+       y = "Approximate Average Percent Proficient",
+       x = "Dollar per Student",
        caption = "Source: National Center for Education Statistics, 2010") +
-  theme(plot.title.position = "plot")
-```
-:::
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        panel.grid.minor.y = element_blank(),
+        panel.grid.minor.x = element_blank()) 
 
-::: {.panel}
-## Prior Version 5 {.panel-name}
-```{r panel-prior5, layout = "l-body-outset", fig.height = 10, fig.width = 10}
-viz3_map_df %>% 
-ggplot(aes(geometry = geometry, 
-           fill = mean_locrev_stu,
-           color = "transparent")) +
-  geom_sf(color = "#b1aaaa", size = 0.06) +
-  scale_fill_scico(palette = 'vik',
-  								 midpoint = 6089,
-  								 name = "Dollar per student",
-  								 breaks = c(3000, 6089, 9000, 12000, 15000),
-  								 labels = c("$3,000", "$6,089 (Average)", "$9,000",
-  								 					 "$12,000", "$15,000")) + 
-  theme_void() +
-  labs(title = "Average District Local Revenue",
-       caption = "Source: National Center for Education Statistics, 2010") +
-  theme(plot.title.position = "plot")
 ```
-
 :::
 
 :::::
@@ -485,8 +427,11 @@ ggplot(aes(geometry = geometry,
 
 As both plots are similar in regard to format and design choices and went through the same evolution, I've included the previous versions of just one plot above. 
 
--  Prior Version 1 is my first attempt at this plot. I used the viridis magma palette. I had not yet figured out how to fill the missing states and had only made some refinements. 
--  In Prior Version 2, I had figured out how to fill states with missing data with the default gray. I had also made initial refinements to the color legend. 
--  Prior Version 3 shows one of my first attempts at exploring different color palettes. I like viridis magma and thought it worked well, but I wanted a more subdued color palette to be cohesive with the color palette I had chosen for the bar plots. Prior Version 3 also includes a discretzied color legend. The issue is that not all colors on the map were represented in the legend. I tried problem-solving but eventually opted to move on.
--  Prior Version 4 includes my selection of a final color palette. I had initially thought I would use the scale as displayed (light to dark). After coming back to this project with fresh eyes, I decided to go with dark to light and to change the state borders to a darker color to distinguish states from the white background. 
-- I had also wanted to try out a divergent color scale (Prior Version 5). I think the diverging color palette is compelling but communicates a different message (most states have district local revenue near or below the national average instead of overall, states in Northeast have the highest average district local revenue).  
+-  I began with exploring the overall relationship across all states and districts. Prior Version 1 is my initial rough and basic attempt at this visualization Default settings and elements are used. The points are clustered near zero.
+-  In Prior Version 2, I made some refinements (alpha, x-axis scale, minimal graph elements, etc.) 
+-  In Prior Version 3, I decided to try color and added `stroke = 0` based on the helpful feedback from peer reviews. 
+-  Given that policies of district funding and property taxes vary at the state level, I wanted to be sure to explore scatterplots at the state level. In this plot (Prior Version 4), I faceted by state. The upside of faceting by state is that only the states with data are included. However, given regional patterns observed with the bar plots and maps, I ended up with `facet_geo` so that the plots were roughly arranged in the shape of the US. I also added some color back in and adjusted breaks and labels. 
+ 
+
+
+
