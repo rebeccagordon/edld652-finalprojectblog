@@ -387,7 +387,7 @@ total_map %>%
 				plot.subtitle = element_text(hjust = .17))
 ```
 
-In the second attempt, I used a palette with more natural and muted color scheme, *bilbao*. It lets the states on the higher end of spending stand out and be easily distinguishable. However, I did not like how the lighter browns do not fully reflect the variation in spending in the states that are on the lower spending side. 
+In the second attempt, I used a palette with a more natural and muted color scheme, *bilbao*. It lets the states on the higher end of spending scale stand out and be easily distinguishable. However, I did not like how the lighter browns do not fully reflect the variation in spending in the states that are on the lower spending side. 
 :::
 
 ::: {.panel}
@@ -416,7 +416,7 @@ total_map %>%
 				plot.title = element_text(hjust = .08),
 				plot.subtitle = element_text(hjust = .17))
 ```
-The third version used the same continuoys scale, *bilbao*, but with the reversed scale. I tried this version in an atttempt to address the lack of variation created by the original *bilbao*. I believe, it helps make the variation in the states with lower total spending easily observable (e.g, compared to version 2, it is easier to see that Idaho, Utah, Oklahoma, Tennessee yield the lowest spending amount). At the same time, the Northeast in lighter colors, together with Alaska and Wyoming, stand apart. However, I was not completely satisfied with this version, because mapping higher spend with the lighter color seemed counter-intuitive to me. 
+The third version used the same continuous scale, *bilbao*, but with the reversed scale. I tried this version in an atttempt to address the lack of variation created by the original *bilbao*. I believe, it helps make the variation in the states with lower total spending easily observable (e.g, compared to version 2, it is easier to see that Idaho, Utah, Oklahoma, Tennessee yield the lowest spending amount). At the same time, the Northeast in lighter colors, together with Alaska and Wyoming, stand apart. However, I was not completely satisfied with this version, because mapping higher spend with the lighter color seemed counter-intuitive to me. 
 
 This version also incorporates some minor refinements, including the position and size of the title, the height of the legend guide, different color of the state outline.  
 
