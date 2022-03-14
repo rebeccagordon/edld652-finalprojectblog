@@ -1,5 +1,5 @@
 ---
-title: "Total Spending on Instruction, Special Education, and Textbooks by state"
+title: "Total spending on instruction, special education, and textbooks by state"
 description: |
   How much does each state spend on instruction, special education, and textbooks?
 author:
@@ -12,7 +12,7 @@ output:
 
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE,
+knitr::opts_chunk$set(echo = FALSE,
                       eval = TRUE,
                       message = FALSE,
                       warning = FALSE)
@@ -108,9 +108,8 @@ textbooks2 <- textbooks2 %>%
 
 **Research Question:** 
 
-How much is spent total on a single student yearly and how do these amounts vary by state?
+What amount of the total expenditure accounts for instruction, textbooks & special education? How do those allocations vary by state?
 
-To illustrate the total expenditure per state, I decided to look at spending per single student. The raw amounts of total spending don't give us a full picture, because states vary by population size and the number of students enrolled in high schools. Thus, looking at the expenditure per single student allows for a more comparable information.  
 
 **Design choices:**
 
@@ -118,9 +117,6 @@ To illustrate the total expenditure per state, I decided to look at spending per
 * Mapping regions to color to add the extra dimension for comparison.
 * Creating a vertical bar to show the national average of the total spending per student, which allows to easily see which states' spending is above and below average. 
 * Balancing the cognitive load by excluding unnecessary components: the title of the Y-axes, horizontal grids, embedded value of the total spending on each bar. 
-
-
-The first plot reflects the total spending per single student by state, while the second plot illustrates the total spending per single student grouped by the region: : 
 
 ```{r panelset, echo=FALSE}
 xaringanExtra::use_panelset()

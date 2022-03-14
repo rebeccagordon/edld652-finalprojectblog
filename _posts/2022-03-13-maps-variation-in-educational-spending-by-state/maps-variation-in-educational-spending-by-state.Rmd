@@ -1,0 +1,511 @@
+---
+title: "Maps: variation in educational spending by state"
+description: |
+  Geographical representation of the expenditures by state
+author:
+  - name: Ksenia Gordeeva
+date: 2022-03-12
+output:
+  distill::distill_article:
+    self_contained: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      eval = TRUE,
+                      message = FALSE,
+                      warning = FALSE)
+
+
+library(edld652)
+library(tidyverse)
+library(here)
+library(janitor)
+library(skimr)
+library(rio)
+#install.packages("fuzzyjoin")
+library(fuzzyjoin)
+library(viridis)
+library(patchwork)
+library(albersusa)
+library(ggridges)
+#install.packages("biscale")
+library(biscale)
+#install.packages("cowplot")
+library(cowplot)
+library(grid)
+#install.packages("gridtext")
+library(gridtext)
+#install.packages("usmap")
+library(usmap)
+library(colorblindr)
+library(scales)
+#devtools::install_github("gadenbuie/xaringanExtra")
+#install.packages("scico")
+library(scico)
+```
+
+```{r load-datasets, echo=FALSE}
+fiscal2010 <- get_data("NCES_CCD_fiscal_district_2010")
+```
+
+```{r ksenia-fiscaldata, echo=FALSE}
+regions <- import(here("data", "us_census_bureau_regions_and_divisions.csv"), setclass = "tbl_df") %>% 
+  rename(`STNAME` = State,
+         STABBR = `State Code`) 
+
+# Total spendings by state
+total <-fiscal2010 %>% 
+  group_by(STNAME) %>%
+  summarise(TOTALEXP = sum(TOTALEXP),
+            V33 = sum(V33)) 
+
+total2 <- left_join(total, regions, by = "STNAME")
+
+#calculating the total spending per student
+total2 <- total2 %>% 
+  mutate(spend_per_stu = TOTALEXP/V33,
+         spend_per_stu_k = (TOTALEXP/V33)/1000)
+
+#spending on instruction by state 
+instruction <- fiscal2010 %>%
+  group_by(STNAME) %>%
+      summarise(E13 = sum(E13), 
+                V33 = sum(V33))
+
+instruction2 <- left_join(instruction, regions, by = "STNAME")
+
+#Change scale of total spending on instruction
+instruction2$E13_B  <- instruction2$E13/1000000000
+
+#calculating instruction spending per student
+instruction2 <- instruction2 %>% 
+  mutate(instr_per_stu = E13/V33,
+         instr_per_stu_k = (E13/V33)/1000)
+
+#spending on Special Ed
+SpEd <- fiscal2010 %>%
+  group_by(STNAME) %>%
+      summarise(Z36 = sum(Z36), 
+                V33 = sum(V33))
+
+SpEd2 <- left_join(SpEd, regions, by = "STNAME")
+
+#removing the states with no data on Special Ed spending
+#SpEd2 <- SpEd2[SpEd2$Z36 >= 0, ]
+
+#Change scale of total spending on SPecial Ed
+SpEd2$Z36_B  <- SpEd2$Z36/1000000000
+
+#calculating special edspending per student
+SpEd2 <- SpEd2 %>% 
+  mutate(SpEd_per_stu = Z36/V33)
+
+#spending on textbooks by state 
+textbooks <- fiscal2010 %>%
+  group_by(STNAME) %>%
+      summarise(V93 = sum(V93),
+                V33 = sum(V33))
+textbooks2 <- left_join(textbooks, regions, by = "STNAME")
+
+#removing the states with no data on textbook spending
+#textbooks2 <- textbooks2[textbooks2$V93 >= 0, ]
+
+#Change scale of total spending on textbooks
+textbooks2$V93_M  <- textbooks2$V93/1000000
+
+#calculating textbook spending per student
+textbooks2 <- textbooks2 %>% 
+  mutate(book_per_stu = V93/V33)
+```
+#### Ksenia
+
+**Research Question:** 
+
+* How much is spent total on education yearly and how do these amounts vary by state?
+* What amount of the total expenditure accounts for instruction, textbooks & special education? How do those allocations vary by state?
+
+**Design choices:**
+
+* Using choropleth maps to illustrate the variance in the spending patterns across states.
+* Choosing divergent color palette which will allow utilization of two different hues to emphasize the difference between states that report spending above national average value and below: values below average are mapped in cold colors, and values above average - in warm. Mapping lower spending in cold hues and higher spending in warm hues appears to be more intuitive than vice verse.
+* Setting up the national average value as a data value that should be mapped to the mid-point of the diverging color scale
+* Restricting the overall range of values to allow for more range between the states.
+* Choosing a darker outline for the state borders to prevent states in the similar spending category (specifically, Midwestern states) from blurring together.
+* Balancing the cognitive load by excluding unnecessary components.
+
+The plots below complement the bar plots published in the previous post and reflect the same spending patterns. However, while the bar plots focus on relative ranking, the choropleths put emphasis on the variation patterns, revealing the areas that are more homogeneous in their expenditure amounts, and accentuating any extreme outliers. The mid-point for the scale is set at the average national value, thus, all states mapped in cold colors (blue) spend below the national average, and the states in mapped in warm colors (brown) spend above the national average level. 
+
+```{r panelset, echo=FALSE}
+xaringanExtra::use_panelset()
+```
+
+::: l-body-outset
+
+::::: {.panelset}
+
+::: {.panel}
+
+## Total Spending {.panel-name}
+```{r map-total, layout = "l-body-outset", fig.height = 10, fig.width = 10}
+us2 <- usa_sf()
+us2 <- rename(us2, STABBR = iso_3166_2)
+total_map <- inner_join(total2, us2, by = "STABBR")
+
+total_map %>% 
+	ggplot(aes(geometry = geometry, 
+						 fill = spend_per_stu_k,
+						 color = "transparent"), 
+				 alpha = 0.9) + 
+     geom_sf(color = "#4f4a4a", size = 0.06) +
+  guides(fill = guide_colorsteps(barwidth = 15,
+                                 barheight = 1,
+                                 title.position = "top",
+                                 title.hjust = .5,
+                                 title = "Total Sending\n[1000 US$ / Year]")) +
+
+  scale_fill_scico( palette = 'vik',
+                    midpoint = 13, 
+                    breaks = c(8,11,14, 17, 20, 23),
+                                   limits = c(7, 23))+
+	labs(title = "State total spendings on education per student",
+			 caption = "Source: National Center for Education Statistics") +
+  theme_void(20) + 
+  theme(legend.position = "bottom",
+        plot.title.position = "plot",
+        plot.title = element_text(hjust = .08),
+        plot.subtitle = element_text(hjust = .17))
+```
+
+#### Note: 
+The overall range of values has been restricted to exclude District of Columbia: it has the highest total spending per student across all states, significantly exceeding the runner-up state of New York. Including DC in the range would result in assigning it the darkest color which would not be visible on the map due to the small size of the District of Columbia. At the expense of DC, the visualization illustrates the overall variation more distinctly. 
+:::
+
+::: {.panel}
+
+## Spending on Instruction {.panel-name}
+```{r map-intruction, layout = "l-body-outset", fig.height = 10, fig.width = 10}
+#Map visualization for the instructional spending per student by state
+instr_map <- inner_join(instruction2, us2, by = "STABBR")
+
+instr_map %>% 
+	ggplot(aes(geometry = geometry, 
+						 fill = instr_per_stu_k,
+						 color = "transparent"), 
+				 alpha = 0.9) + 
+	geom_sf(color = "#4f4a4a", size = 0.1) +
+  guides(fill = guide_colorsteps(barwidth = 15,
+                                 barheight = 1,
+                                 title.position = "top",
+                                 title.hjust = .5,
+                                 title = "Instructional Spending\n[1000 US$ / Year]")) +
+  scale_fill_scico( palette = 'vik',
+                    midpoint = 6.5, 
+                       breaks = c(2, 4, 6, 8, 10, 12),
+                       limits = c(2, 13)) +
+	labs(title = "State instructional spendings per student",
+			 caption = "Source: National Center for Education Statistics") +
+  theme_void(20) + 
+  theme(legend.position = "bottom",
+        plot.title.position = "plot",
+        plot.title = element_text(hjust = .08),
+        plot.subtitle = element_text(hjust = .17))
+```
+::: 
+
+::: {.panel}
+
+## Spending on Special Education {.panel-name}
+```{r map-SpEd, layout = "l-body-outset", fig.height = 10, fig.width = 10}
+#Map visualization for the SPED spending per student by state
+sped_map <- inner_join(SpEd2, us2, by = "STABBR")
+
+sped_map %>% 
+	ggplot(aes(geometry = geometry, 
+						 fill = SpEd_per_stu,
+						 color = "transparent"), 
+				 alpha = 0.9) + 
+	geom_sf(color = "#4f4a4a", size = 0.1) +
+  guides(fill = guide_colorsteps(barwidth = 15,
+                                 barheight = 1,
+                                 title.position = "top",
+                                 title.hjust = .5,
+                                 title = "Special Education Spending\n[US$ / Year]")) +
+  scale_fill_scico(palette = 'vik',
+                    midpoint = 650, 
+                   na.value = "gray60",
+                       breaks = c(0, 250, 500, 750, 1000, 1250, 1500),
+                       limits = c(200, 1500)) +
+	labs(title = "State Special Education spendings per student",
+			 caption = "Source: National Center for Education Statistics") +
+  theme_void(20) + 
+  theme(legend.position = "bottom",
+          plot.title.position = "plot",
+        plot.title = element_text(hjust = .08),
+        plot.subtitle = element_text(hjust = .17))
+```
+#### Note: 
+The states mapped in gray did not have their spending data reported. 
+::: 
+
+::: {.panel}
+
+## Spending on Textbooks {.panel-name}
+```{r map-books, layout = "l-body-outset", fig.height = 10, fig.width = 10}
+#Map visualization for the textbook spending per student by state
+text_map <- inner_join(textbooks2, us2, by = "STABBR")
+
+text_map %>% 
+	ggplot(aes(geometry = geometry, 
+						 fill = book_per_stu,
+						 color = "transparent"), 
+				 alpha = 0.9) + 
+	geom_sf(color = "#4f4a4a", size = 0.1) +
+  guides(fill = guide_colorsteps(barwidth = 15,
+                                 barheight = 1,
+                                 title.position = "top",
+                                 title.hjust = .5,
+                                 title = "Spending on Textbooks \n[USD / Year]")) +
+ scale_fill_scico( palette = 'vik',
+                    midpoint = 60, 
+                       breaks = c(25, 50, 75, 100, 125, 150),
+                       limits = c(20, 150)) +
+	labs(title = "State spending on textbooks per student",
+			 caption = "Source: National Center for Education Statistics") +
+  theme_void(20) + 
+  theme(legend.position = "bottom",
+        plot.title.position = "plot",
+        plot.title = element_text(hjust = .08),
+        plot.subtitle = element_text(hjust = .17))
+```
+#### Note: 
+The states mapped in gray did not have their spending data reported. 
+::: 
+::: {.panel}
+## Code for the final plots {.panel-name}
+```{r ksenia-maps-code, fig.show='hide', echo=TRUE}
+total_map %>% 
+	ggplot(aes(geometry = geometry, 
+						 fill = spend_per_stu_k,
+						 color = "transparent"), 
+				 alpha = 0.9) + 
+     geom_sf(color = "#4f4a4a", size = 0.06) +
+  guides(fill = guide_colorsteps(barwidth = 15,
+                                 barheight = 1,
+                                 title.position = "top",
+                                 title.hjust = .5,
+                                 title = "Total Sending\n[1000 US$ / Year]")) +
+
+  scale_fill_scico( palette = 'vik',
+                    midpoint = 13, 
+                    breaks = c(8,11,14, 17, 20, 23),
+                                   limits = c(7, 23))+
+	labs(title = "State total spendings on education per student",
+			 caption = "Source: National Center for Education Statistics") +
+  theme_void(20) + 
+  theme(legend.position = "bottom",
+        plot.title.position = "plot",
+        plot.title = element_text(hjust = .08),
+        plot.subtitle = element_text(hjust = .17))
+```
+:::
+
+:::::
+
+:::
+
+#### Findings: 
+The regional patterns revealed by the bar plots are easily observable on the maps. With regards to the total spending, the Northeast region is colored in warm brown colors to reflect above the average total spending of all the states in this area. At the same time, West and South are mapped in blue that corresponds to the lower than average spending of the states in those areas. The map is effective in showing that the majority of Midwestern states are very close to the national average level. Compared to the bar plot, the map makes it easier to draw attention to the outliers due to their highly saturated colors, especially when they don't conform to the general pattern of the region. For example, Wyoming and Alaska that are much higher spenders compared to the rest of the Western states really stand out here. 
+
+The patterns on the map presenting instructional spending closely align with the patterns of the total spending (highest expenditure in the Northeast, lowest in the West). When looked at side by side, the two maps look almost identical - something that is not easily identifiable on the bar plots due to the emphasis on scaling in the latter. 
+
+The maps illustrating spending on special education and textbooks are not ideal, because the data on those spending categories was missing from a number of states. Nevertheless, the general patterns are easily noticeable. The highest spenders (Pennsylvania for textbooks and New Hampshire for special education) and the lowest spenders (South Dakota and Utah for special education; Kentucky, Alabama and Hawaii for textbooks) stand out and are easily distinguishable. The map for textbooks reveals the lack of any regional patterns. 
+
+**Prior Versions** 
+
+The previous iterations of the map visualization of the expenditure allocation mostly feature utilization of different palettes, since it was my biggest design choice in this part. I am providing the prior versions of the total expenditure visualization to illustrate the design evolution. The prior plots for instructional, special education, and textbook spending featured the same changes in format and design choices. 
+
+:::l-body-outset
+
+::::: {.panelset}
+
+::: {.panel}
+
+## Prior Version 1 {.panel-name}
+
+```{r map-prior1, layout = "l-body-outset", fig.height = 10, fig.width = 10}
+total_map %>% 
+	ggplot(aes(geometry = geometry, 
+						 fill = spend_per_stu_k,
+						 color = "transparent"), 
+				 alpha = 0.9) + 
+	geom_sf(color = "white", size = 0.1) +
+  guides(fill = guide_colorsteps(barwidth = 15,
+                                 barheight = .5,
+                                 title.position = "top",
+                                 title.hjust = .5,
+                                 title = "Total Sending\n[1000 US$ / Year]")) +
+  scale_fill_viridis_c(option = "inferno",
+                       breaks = c(0,5,10,15,20, 25, 30),
+                       limits = c(0, 30),
+                       begin = 0) +
+	labs(title = "State total spendings on education per student",
+			 subtitle = "2010",
+			 caption = "Source: National Center for Education Statistics") +
+  theme_void() + 
+  theme(legend.position = "bottom",
+        plot.title = element_text(hjust = .08),
+        plot.subtitle = element_text(hjust = .17))
+```
+The first version of the map visualization features the *viridis inferno* palette. I opted not to use this color scheme because it is overly saturated and does not align with the aesthetic in other posts. 
+
+:::
+
+::: {.panel}
+## Prior Version 2 {.panel-name}
+```{r map-prior2, layout = "l-body-outset", fig.height = 10, fig.width = 10}
+total_map %>% 
+	ggplot(aes(geometry = geometry, 
+						 fill = spend_per_stu_k,
+						 color = "transparent"), 
+				 alpha = 0.9) + 
+	geom_sf(color = "white", size = 0.1) +
+	guides(fill = guide_colorsteps(barwidth = 15,
+																 barheight = .5,
+																 title.position = "top",
+																 title.hjust = .5,
+																 title = "Total Sending\n[1000 US$ / Year]")) +
+	scale_fill_scico(palette = "bilbao", direction = 1, 
+																	 breaks = c(0,5,10,15,20, 25, 30),
+																	 limits = c(0, 30))+
+	labs(title = "State total spendings on education per student",
+			 subtitle = "2010",
+			 caption = "Source: National Center for Education Statistics") +
+	theme_void() + 
+	theme(legend.position = "bottom",
+				plot.title = element_text(hjust = .08),
+				plot.subtitle = element_text(hjust = .17))
+```
+
+In the second attempt, I used a palette with more natural and muted color scheme, *bilbao*. It lets the states on the higher end of spending stand out and be easily distinguishable. However, I did not like how the lighter browns do not fully reflect the variation in spending in the states that are on the lower spending side. 
+:::
+
+::: {.panel}
+## Prior Version 3 {.panel-name}
+```{r map-prior3, layout = "l-body-outset", fig.height = 10, fig.width = 10}
+total_map %>% 
+	ggplot(aes(geometry = geometry, 
+						 fill = spend_per_stu_k,
+						 color = "transparent"), 
+				 alpha = 0.9) + 
+	geom_sf(color = "#4f4a4a", size = 0.1) +
+	guides(fill = guide_colorsteps(barwidth = 15,
+																 barheight = 1,
+																 title.position = "top",
+																 title.hjust = .5,
+																 title = "Total Sending\n[1000 US$ / Year]")) +
+	scale_fill_scico(palette = "bilbao", direction = -1, 
+																	 breaks = c(0,5,10,15,20, 25, 30),
+																	 limits = c(0, 30))+
+	labs(title = "State total spendings on education per student",
+			 subtitle = "2010",
+			 caption = "Source: National Center for Education Statistics") +
+	theme_void(20) + 
+	theme(legend.position = "bottom",
+	      plot.title.position = "plot",
+				plot.title = element_text(hjust = .08),
+				plot.subtitle = element_text(hjust = .17))
+```
+The third version used the same continuoys scale, *bilbao*, but with the reversed scale. I tried this version in an atttempt to address the lack of variation created by the original *bilbao*. I believe, it helps make the variation in the states with lower total spending easily observable (e.g, compared to version 2, it is easier to see that Idaho, Utah, Oklahoma, Tennessee yield the lowest spending amount). At the same time, the Northeast in lighter colors, together with Alaska and Wyoming, stand apart. However, I was not completely satisfied with this version, because mapping higher spend with the lighter color seemed counter-intuitive to me. 
+
+This version also incorporates some minor refinements, including the position and size of the title, the height of the legend guide, different color of the state outline.  
+
+:::
+
+::: {.panel}
+## Prior Version 4 {.panel-name}
+```{r panel-prior4, layout = "l-body-outset", fig.height = 10, fig.width = 10}
+total_map %>% 
+	ggplot(aes(geometry = geometry, 
+						 fill = spend_per_stu_k,
+						 color = "transparent"), 
+				 alpha = 0.9) + 
+	geom_sf(color = "#4f4a4a", size = 0.1) +
+	guides(fill = guide_colorsteps(barwidth = 15,
+																 barheight = 1,
+																 title.position = "top",
+																 title.hjust = .5,
+																 title = "Total Sending\n[1000 US$ / Year]")) +
+	scale_fill_continuous_divergingx(palette = "Earth",
+																	 #mid = 12, 
+																	 breaks = c(0,5,10,15,20, 25, 30),
+																	 limits = c(0, 30))+
+	labs(title = "State total spendings on education per student",
+			 caption = "Source: National Center for Education Statistics") +
+	theme_void(20) + 
+	theme(legend.position = "bottom",
+	      plot.title.position = "plot",
+				plot.title = element_text(hjust = .08),
+				plot.subtitle = element_text(hjust = .17))
+
+total_map %>% 
+	ggplot(aes(geometry = geometry, 
+						 fill = spend_per_stu_k,
+						 color = "transparent"), 
+				 alpha = 0.9) + 
+	geom_sf(color = "#4f4a4a", size = 0.1) +
+	guides(fill = guide_colorsteps(barwidth = 15,
+																 barheight = 1,
+																 title.position = "top",
+																 title.hjust = .5,
+																 title = "Total Sending\n[1000 US$ / Year]")) +
+	scale_fill_continuous_divergingx(palette = "Earth",
+																	 mid = 12, 
+																	 rev = TRUE,
+																	 breaks = c(0,5,10,15,20, 25, 30),
+																	 limits = c(0, 30))+
+	labs(title = "State total spendings on education per student",
+			 caption = "Source: National Center for Education Statistics") +
+	theme_void(20) + 
+	theme(legend.position = "bottom",
+	      plot.title.position = "plot",
+				plot.title = element_text(hjust = .08),
+				plot.subtitle = element_text(hjust = .17))
+```
+
+Next, I tried to apply the divergent palette, *Earth*, instead of a continuous scale. The first attempt at using it was not successful, but setting up the mean value to the mid-point fixed it. It appears to me, that it is counterintuitive to map highest spending amounts on the colder color, that is why I tried the reverse order of the palette. I was satisfied with the result, upon the whole, however, the representation of the variance was still lacking for me with the current colors. The temperature of the colors was there to reflect the difference, but I wanted more saturation as well. 
+:::
+
+::: {.panel}
+## Prior Version 5 {.panel-name}
+```{r map-prior5, layout = "l-body-outset", fig.height = 10, fig.width = 10}
+total_map %>% 
+	ggplot(aes(geometry = geometry, 
+						 fill = spend_per_stu_k,
+						 color = "transparent"), 
+				 alpha = 0.9) + 
+	geom_sf(color = "#4f4a4a", size = 0.06) +
+	guides(fill = guide_colorsteps(barwidth = 15,
+																 barheight = 1,
+																 title.position = "top",
+																 title.hjust = .5,
+																 title = "Total Sending\n[1000 US$ / Year]")) +
+	scale_fill_scico( palette = 'vik',
+										midpoint = 12, 
+										breaks = c(0,5,10,15,20, 25, 30),
+										limits = c(0, 30))+
+	labs(title = "State total spendings on education per student",
+			 caption = "Source: National Center for Education Statistics") +
+	theme_void(20) + 
+	theme(legend.position = "bottom",
+	      plot.title.position = "plot",
+				plot.title = element_text(hjust = .08),
+				plot.subtitle = element_text(hjust = .17))
+```
+*Vik* was the second divergent scale that O tried using. I was very pleased with the division along the average line: cold blue colors for low spending and warm brown colors for high ones. The saturation is not there yet in the current attempt, but I was able to achieve higher saturation range in the final version with restricting the limit and the breaks of the axis. I think the divergent scale is effective in not only depicting the variation and outliers, but also allows a better possibility for relative comparison. The final point in favor of the current palette was the fact hat *Vik* turned out to be more color-blind friendly. 
+:::
+
+:::::
+
+:::
+

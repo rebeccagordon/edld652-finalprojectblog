@@ -1,5 +1,5 @@
 ---
-title: "Total Spending on Education per Student"
+title: "Total spending on education per student"
 description: |
   How much does each state spend total yearly per single student?
 author:

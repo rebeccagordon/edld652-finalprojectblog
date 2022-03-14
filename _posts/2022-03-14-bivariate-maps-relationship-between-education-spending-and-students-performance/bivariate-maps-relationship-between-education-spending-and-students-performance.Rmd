@@ -1,0 +1,1415 @@
+---
+title: "Bivariate maps: relationship between education spending and students' performance"
+description: |
+  Does increased spending on education result in improved students' performance?
+author:
+  - name: Ksenia Gordeeva
+date: 2022-03-12
+output:
+  distill::distill_article:
+    self_contained: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      eval = TRUE,
+                      message = FALSE,
+                      warning = FALSE)
+
+
+library(edld652)
+library(tidyverse)
+library(here)
+library(janitor)
+library(skimr)
+library(rio)
+#install.packages("fuzzyjoin")
+library(fuzzyjoin)
+library(viridis)
+library(patchwork)
+library(albersusa)
+library(ggridges)
+#install.packages("biscale")
+library(biscale)
+#install.packages("cowplot")
+library(cowplot)
+library(grid)
+#install.packages("gridtext")
+library(gridtext)
+#install.packages("usmap")
+library(usmap)
+library(colorblindr)
+library(scales)
+#devtools::install_github("gadenbuie/xaringanExtra")
+#install.packages("scico")
+library(scico)
+```
+
+```{r load-datasets, echo=FALSE}
+fiscal2010 <- get_data("NCES_CCD_fiscal_district_2010")
+
+mathlea_10 <- get_data("EDFacts_math_achievement_lea_2010_2019")
+
+rlalea_10 <- get_data("EDFacts_rla_achievement_lea_2010_2019")
+```
+
+```{r ksenia-fiscaldata, echo=FALSE}
+regions <- import(here("data", "us_census_bureau_regions_and_divisions.csv"), setclass = "tbl_df") %>% 
+  rename(`STNAME` = State,
+         STABBR = `State Code`) 
+
+# Total spendings by state
+total <-fiscal2010 %>% 
+  group_by(STNAME) %>%
+  summarise(TOTALEXP = sum(TOTALEXP),
+            V33 = sum(V33)) 
+
+total2 <- left_join(total, regions, by = "STNAME")
+
+#calculating the total spending per student
+total2 <- total2 %>% 
+  mutate(spend_per_stu = TOTALEXP/V33,
+         spend_per_stu_k = (TOTALEXP/V33)/1000)
+
+#spending on instruction by state 
+instruction <- fiscal2010 %>%
+  group_by(STNAME) %>%
+      summarise(E13 = sum(E13), 
+                V33 = sum(V33))
+
+instruction2 <- left_join(instruction, regions, by = "STNAME")
+
+#Change scale of total spending on instruction
+instruction2$E13_B  <- instruction2$E13/1000000000
+
+#calculating instruction spending per student
+instruction2 <- instruction2 %>% 
+  mutate(instr_per_stu = E13/V33,
+         instr_per_stu_k = (E13/V33)/1000)
+
+#spending on Special Ed
+SpEd <- fiscal2010 %>%
+  group_by(STNAME) %>%
+      summarise(Z36 = sum(Z36), 
+                V33 = sum(V33))
+
+SpEd2 <- left_join(SpEd, regions, by = "STNAME")
+
+#removing the states with no data on Special Ed spending
+SpEd2 <- SpEd2[SpEd2$Z36 >= 0, ]
+
+#Change scale of total spending on SPecial Ed
+SpEd2$Z36_B  <- SpEd2$Z36/1000000000
+
+#calculating special ed spending per student
+SpEd2 <- SpEd2 %>% 
+  mutate(SpEd_per_stu = Z36/V33)
+
+#spending on textbooks by state 
+textbooks <- fiscal2010 %>%
+  group_by(STNAME) %>%
+      summarise(V93 = sum(V93),
+                V33 = sum(V33))
+textbooks2 <- left_join(textbooks, regions, by = "STNAME")
+
+#removing the states with no data on textbook spending
+textbooks2 <- textbooks2[textbooks2$V93 >= 0, ]
+
+#Change scale of total spending on textbooks
+textbooks2$V93_M  <- textbooks2$V93/1000000
+
+#calculating textbook spending per student
+textbooks2 <- textbooks2 %>% 
+  mutate(book_per_stu = V93/V33)
+```
+```{r ksenia-testdata}
+#getting reading and language arts data
+rla <- rlalea_10 %>% 
+  select(YEAR, 
+         STNAM, 
+         ALL_RLA00PCTPROF,
+         MWH_RLA00PCTPROF,
+         CWD_RLA00PCTPROF) %>% 
+  rename(`STNAME` = STNAM) %>% 
+  mutate(STNAME = str_to_title(STNAME), 
+         (across(ALL_RLA00PCTPROF:CWD_RLA00PCTPROF, 
+                 ~replace(., . %in% c("PS", 
+                                      "n/a",	
+                                      "LT50",	
+                                      "LE5",	
+                                      "LE20",	
+                                      "LE10",	
+                                      "GE99",	
+                                      "GE95",	
+                                      "GE90",	
+                                      "GE80",	
+                                      "GE50"), NA))))
+
+#Mean rla scores for all students
+rla <- rla %>% 
+  tidyr::separate(ALL_RLA00PCTPROF, c("all_lower", "all_upper"), sep = "-") %>% 
+  mutate(
+    all_upper = ifelse(is.na(all_upper), all_lower, all_upper),
+    all_lower = as.numeric(all_lower),
+    all_upper = as.numeric(all_upper)
+    ) %>% 
+  rowwise() %>% 
+  mutate(mean_rla_all = mean(c(all_lower, all_upper))) %>% 
+  ungroup()
+
+#Mean rla scores for white students
+rla <- rla %>% 
+  tidyr::separate(MWH_RLA00PCTPROF, c("wh_lower", "wh_upper"), sep = "-") %>% 
+  mutate(
+    wh_upper = ifelse(is.na(wh_upper), wh_lower, wh_upper),
+    wh_lower = as.numeric(wh_lower),
+    wh_upper = as.numeric(wh_upper)
+    ) %>% 
+  rowwise() %>% 
+  mutate(meanf_rla_wh = mean(c(wh_lower, wh_upper))) %>% 
+  ungroup()
+
+# mean rla scores for students with disabilities
+rla <- rla %>% 
+  tidyr::separate(CWD_RLA00PCTPROF, c("dis_lower", "dis_upper"), sep = "-") %>% 
+  mutate(
+    dis_upper = ifelse(is.na(dis_upper), dis_lower, dis_upper),
+    dis_lower = as.numeric(dis_lower),
+    dis_upper = as.numeric(dis_upper)
+    ) %>% 
+  rowwise() %>% 
+  mutate(mean_rla_dis = mean(c(dis_lower, dis_upper))) %>% 
+  ungroup()
+
+rla_new <- rla %>% 
+  select(YEAR, 
+         STNAME,
+         contains("mean"))
+
+#getting math data
+math <- mathlea_10 %>% 
+  select(YEAR, 
+         STNAM, 
+         ALL_MTH00PCTPROF,
+         MWH_MTH00PCTPROF,
+         CWD_MTH00PCTPROF) %>% 
+  rename(`STNAME` = STNAM) %>%
+  mutate(STNAME = str_to_title(STNAME), 
+         (across(ALL_MTH00PCTPROF:CWD_MTH00PCTPROF, 
+                 ~replace(., . %in% c("PS", 
+                                      "n/a",	
+                                      "LT50",	
+                                      "LE5",	
+                                      "LE20",	
+                                      "LE10",	
+                                      "GE99",	
+                                      "GE95",	
+                                      "GE90",	
+                                      "GE80",	
+                                      "GE50"), NA))))
+
+#Mean math scores for all students
+math <- math %>% 
+  tidyr::separate(ALL_MTH00PCTPROF, c("all_lower", "all_upper"), sep = "-") %>% 
+  mutate(
+    all_upper = ifelse(is.na(all_upper), all_lower, all_upper),
+    all_lower = as.numeric(all_lower),
+    all_upper = as.numeric(all_upper)
+    ) %>% 
+  rowwise() %>% 
+  mutate(mean_math_all = mean(c(all_lower, all_upper))) %>% 
+  ungroup()
+
+#Mean math scores for white students
+math <- math %>% 
+  tidyr::separate(MWH_MTH00PCTPROF, c("wh_lower", "wh_upper"), sep = "-") %>% 
+  mutate(
+    wh_upper = ifelse(is.na(wh_upper), wh_lower, wh_upper),
+    wh_lower = as.numeric(wh_lower),
+    wh_upper = as.numeric(wh_upper)
+    ) %>% 
+  rowwise() %>% 
+  mutate(mean_math_wh = mean(c(wh_lower, wh_upper))) %>% 
+  ungroup()
+
+# mean mathscores for students with disabilities
+math <- math %>% 
+  tidyr::separate(CWD_MTH00PCTPROF, c("dis_lower", "dis_upper"), sep = "-") %>% 
+  mutate(
+    dis_upper = ifelse(is.na(dis_upper), dis_lower, dis_upper),
+    dis_lower = as.numeric(dis_lower),
+    dis_upper = as.numeric(dis_upper)
+    ) %>% 
+  rowwise() %>% 
+  mutate(mean_math_dis = mean(c(dis_lower, dis_upper))) %>% 
+  ungroup()
+
+math_new <- math %>% 
+  select(YEAR, 
+         STNAME,
+         contains("mean"))
+
+scores <- full_join(math_new, 
+                    rla_new, 
+                              by = "STNAME")
+
+#dataset with all the scores and the total spending on Education
+scores_spending <- full_join(scores, 
+                              total2,
+                              by = "STNAME")
+
+#dataset with all the scores and the total spending on Instruction
+scores_instruction <- full_join(scores, 
+                              instruction2,
+                              by = "STNAME")
+
+#dataset with all the scores and the total spending on Special Ed
+scores_SpEd <- full_join(scores, 
+                              SpEd2,
+                              by = "STNAME")
+
+#dataset with all the scores and the total spending on textbooks
+scores_books <- full_join(scores, 
+                              textbooks2,
+                              by = "STNAME")
+
+```
+#### Ksenia
+
+**Research Question:** 
+
+* Does increased spending on education in total and on any of the categories (instruction, special education, textbooks) in particular correlate result in better students’ performance? Does cross-state variation in expenditure explain the cross-state variation in education outcomes? 
+
+
+**Design choices:**
+
+* Using bivariate choropleth maps to illustrate how performance on tests and expenditure covary. The choice was motivated by the fact that bivariate maps tend to show not only how two variables correlate, but where they tend to be in disagreement, which seemed very valuable to me. 
+* Striving for (relative) simplicity in bivariate maps (e.g., not including decimal points and raw numbers – instead, attempting to emphasize relative rankings).
+* Selecting a color palette that is color-blindness friendly and facilitates an easier interpretation. 
+* Choosing to use 3 dimension to reflect the nuances that might be of interest to policy makers at the Department of Education. Acknowledging, that if the intended audience for this visualization is general public, 2 dimensions might be a better option. 
+
+
+```{r panelset, echo=FALSE}
+xaringanExtra::use_panelset()
+```
+
+::: l-body-outset
+
+::::: {.panelset}
+
+::: {.panel}
+
+## Total Spending {.panel-name}
+
+The first bivariate map below is showing the combination of the total spending on education per student and the average demonstrated proficiency in Reading and Langguage Arts, while the second one - the relationship between the total spending on education per student and the average demonstrated proficiency in Math.
+
+```{r bi-total, layout = "l-body-outset", fig.height = 8, fig.width = 12}
+## biscale map
+biscale <- 
+  scores_spending %>% 
+  group_by(STNAME) %>% 
+  summarize(
+    rla = mean(mean_rla_all, na.rm=TRUE),
+    spend = mean(spend_per_stu_k, na.rm=TRUE)
+  ) %>% 
+  bi_class(x = rla, y = spend, style = "quantile", dim = 3)
+
+
+names(biscale)[1]<-"full"
+map_join<- biscale%>%left_join(statepop, by= "full") 
+
+
+p2<-plot_usmap(data = map_join, values = "bi_class", labels = TRUE, label_color = "black")   +
+  bi_scale_fill(pal = "DkCyan", dim = 3, guide = F) +
+  scale_x_continuous(breaks = NULL) + 
+  scale_y_continuous(breaks = NULL) +
+  theme(
+    plot.title = element_text(margin = margin(b = 8), 
+                              color = "#ffffff",face = "bold",size = 9,
+                              hjust = 0.5,
+                              family = "Arial"),
+    plot.subtitle = element_text(margin = margin(t=10,b = 25), 
+                                 color = "#ffffff", size = 6, family = "Arial",
+                                 hjust = 0.5),
+    plot.caption =  element_text(margin = margin(t = 20), 
+                                 color = "#ffffff", size = 5, family = "Arial",
+                                 hjust = 0.95),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    legend.title = element_blank(),
+    axis.text.x    = element_blank(),
+    axis.text.y    = element_blank(),
+    panel.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(), 
+    plot.background = element_rect(fill = "#f3f3f3", color = NA),
+    panel.border = element_blank(),
+    plot.margin = unit(c(1, 1, 1, 1), "cm"),
+    axis.ticks = element_blank(),
+  ) 
+
+p2$layers[[2]]$aes_params$size <- 2.5
+
+legend_US<- 
+  bi_legend(pal = "DkCyan",
+            dim = 3,
+            xlab = "Proficiency in RLA",
+            ylab = "Spend total",
+            size = 30) +
+  theme(rect = element_rect(fill = "grey10"),
+        panel.border = element_blank(),
+        axis.text = element_blank(),
+        plot.background = element_rect(fill = "#f3f3f3", color = NA),
+        axis.title.x = element_text(size = 12,
+                                    color = "grey20",
+                                    face = "bold"),
+        axis.title.y = element_text(size = 12,
+                                    color = "grey20",
+                                    face = "bold"),
+        legend.text = element_text(size = 5),
+        legend.text.align = 0)
+
+
+ggdraw() +
+  draw_plot(p2, 0, 0, 1, 1) +
+  draw_plot(legend_US, 0, 0.1, 0.2, 0.3) +
+  draw_label("Source:National Center for Education Statistics)", 
+             color = "#a1a1a1", size = 7.5, angle = 0, x = 0.9, y = 0.05) +
+  draw_label("In which states the total spending on Education positively affects the average performance in RLA?", 
+             color = "#000000", size = 15, angle = 0, x =0.5, y = 0.97, fontface = "bold") +
+  theme(plot.background = element_rect(fill = "#f3f3f3", color = NA), 
+        plot.title.position = "panel") 
+
+biscale01 <- 
+  scores_spending %>% 
+  group_by(STNAME) %>% 
+  summarize(
+    math = mean(mean_math_all, na.rm=TRUE),
+    spend = mean(spend_per_stu_k, na.rm=TRUE)
+  ) %>% 
+  bi_class(x = math, y = spend, style = "quantile", dim = 3)
+
+
+names(biscale01)[1]<-"full"
+map_join01<- biscale01%>%left_join(statepop, by= "full") 
+
+
+p01<-plot_usmap(data = map_join01, values = "bi_class", labels = TRUE, label_color = "black")   +
+  bi_scale_fill(pal = "DkCyan", dim = 3, guide = F) +
+  scale_x_continuous(breaks = NULL) + 
+  scale_y_continuous(breaks = NULL) +
+  theme(
+    plot.title = element_text(margin = margin(b = 8), 
+                              color = "#ffffff",face = "bold",size = 9,
+                              hjust = 0.5,
+                              family = "Arial"),
+    plot.subtitle = element_text(margin = margin(t=10,b = 25), 
+                                 color = "#ffffff", size = 6, family = "Arial",
+                                 hjust = 0.5),
+    plot.caption =  element_text(margin = margin(t = 20), 
+                                 color = "#ffffff", size = 5, family = "Arial",
+                                 hjust = 0.95),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    legend.title = element_blank(),
+    axis.text.x    = element_blank(),
+    axis.text.y    = element_blank(),
+    panel.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(), 
+    plot.background = element_rect(fill = "#f3f3f3", color = NA),
+    panel.border = element_blank(),
+    plot.margin = unit(c(1, 1, 1, 1), "cm"),
+    axis.ticks = element_blank(),
+  ) 
+
+p01$layers[[2]]$aes_params$size <- 2.5
+
+legend_US01<- 
+  bi_legend(pal = "DkCyan",
+            dim = 3,
+            xlab = "Proficiency in Math",
+            ylab = "Spend total",
+            size = 30) +
+  theme(rect = element_rect(fill = "grey10"),
+        panel.border = element_blank(),
+        axis.text = element_blank(),
+        plot.background = element_rect(fill = "#f3f3f3", color = NA),
+        axis.title.x = element_text(size = 12,
+                                    color = "grey20",
+                                    face = "bold"),
+        axis.title.y = element_text(size = 12,
+                                    color = "grey20",
+                                    face = "bold"),
+        legend.text = element_text(size = 5),
+        legend.text.align = 0)
+
+
+ggdraw() +
+  draw_plot(p01, 0, 0, 1, 1) +
+  draw_plot(legend_US01, 0, 0.1, 0.2, 0.3) +
+  draw_label("Source:National Center for Education Statistics)", 
+             color = "#a1a1a1", size = 7.5, angle = 0, x = 0.9, y = 0.05) +
+  draw_label("In which states the total spending on Education positively affects the average performance in Math?", 
+             color = "#000000", size = 15, angle = 0, x =0.5, y = 0.97, fontface = "bold") +
+  theme(plot.background = element_rect(fill = "#f3f3f3", color = NA), 
+        plot.title.position = "panel") 
+```
+#### Findings: 
+We can see that the increased total spending on a student resulted in increased proficiency test scores, in both math and RLA, in such states Illinois, New York, Maryland, Connecticut, and District of Columbia. In New Hampshire and Ohio, increased total spending correlate with the increased performance on RLA, but with average performance in math, while in North Dakota, above average spending is associated with increased math and average RLA performances.  Aligning with this trend are the states such as Arizona, Oklahoma, Missouri, Tennessee, Mississippi, where the total spend on Education was the lowest relative to other states, and the students demonstrated the lowest scores in both math and RLA. In Florida, lowest relative spending is associated with below average RLA scores and average math performance.
+
+However, this trend is not categorical across all the states. States like Texas, Idaho,  Colorado, and Georgia demonstrated relatively high RLA and math scores while they spend less per student. Similarly, Utah reports one of the lowest total spending, but demonstrates above average performance in RLA, and average scores in math, and South Dakota and North Carolina are among the lowest total spenders, but its students perform above average in math and average on RLA. At the same time, Maine exhibits the opposite pattern: the high total spending on Education there negatively correlates with the students' both RLA and math proficiency. The situation is similar in Rhode Island, where the education spendings are high, but students demonstrate poor math and average RLA scores.
+:::
+
+::: {.panel}
+
+## Spending on Instruction {.panel-name}
+
+The first bivariate map below is showing the combination of the total spending on instruction per student and the average demonstrated proficiency in Reading and Language Arts, while the second one - the correlation between the total spending on instruction and the average math scores. 
+
+```{r bi-instruction, layout = "l-body-outset", fig.height = 8, fig.width = 12}
+biscale2 <- 
+  scores_instruction %>% 
+  group_by(STNAME) %>% 
+  summarize(
+    rla = mean(mean_rla_all, na.rm=TRUE),
+    instr = mean(instr_per_stu_k, na.rm=TRUE)
+  ) %>% 
+  bi_class(x = rla, y = instr, style = "quantile", dim = 3)
+
+
+names(biscale2)[1]<-"full"
+map_join2<- biscale2%>%left_join(statepop, by= "full") 
+
+
+
+p3<-plot_usmap(data = map_join2, values = "bi_class", labels = TRUE, label_color = "black")   +
+  bi_scale_fill(pal = "DkCyan", dim = 3, guide = F) +
+  scale_x_continuous(breaks = NULL) + 
+  scale_y_continuous(breaks = NULL) +
+  theme(
+    plot.title = element_text(margin = margin(b = 8), 
+                              color = "#ffffff",face = "bold",size = 9,
+                              hjust = 0.5,
+                              family = "Arial"),
+    plot.subtitle = element_text(margin = margin(t=10,b = 25), 
+                                 color = "#ffffff", size = 6, family = "Arial",
+                                 hjust = 0.5),
+    plot.caption =  element_text(margin = margin(t = 20), 
+                                 color = "#ffffff", size = 5, family = "Arial",
+                                 hjust = 0.95),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    legend.title = element_blank(),
+    axis.text.x    = element_blank(),
+    axis.text.y    = element_blank(),
+    panel.background = element_blank(), 
+    panel.grid.major = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(), 
+    plot.background = element_rect(fill = "#f3f3f3", color = NA),
+    panel.border = element_blank(),
+    plot.margin = unit(c(1, 1, 1, 1), "cm"),
+    axis.ticks = element_blank()
+  ) 
+
+
+p3$layers[[2]]$aes_params$size <- 2.5
+
+legend_US3<- 
+  bi_legend(pal = "DkCyan",
+            dim = 3,
+            xlab = "Proficiency in RLA",
+            ylab = "Instructional Spend",
+            size = 30) +
+  theme(rect = element_rect(fill = "grey10"),
+        panel.border = element_blank(),
+        axis.text = element_blank(),
+        plot.background = element_rect(fill = "#f3f3f3", color = NA),
+        axis.title.x = element_text(size = 12,
+                                    color = "grey20",
+                                    face = "bold"),
+        axis.title.y = element_text(size = 12,
+                                    color = "grey20",
+                                    face = "bold"),
+        legend.text = element_text(size = 5),
+        legend.text.align = 0)
+
+
+ggdraw() +
+  draw_plot(p3, 0, 0, 1, 1) +
+  draw_plot(legend_US3, 0, 0.1, 0.2, 0.3) +
+  draw_label("Source:National Center for Education Statistics)", 
+             color = "#a1a1a1", size = 7.5, angle = 0, x = 0.9, y = 0.05) +
+  draw_label("In which states the total spending on Instruction per student positively affects performance in RLA?", 
+             color = "#000000", size = 15, angle = 0, x =0.5, y = 0.97, fontface = "bold") +
+  theme(plot.background = element_rect(fill = "#f3f3f3", color = NA)) 
+
+
+biscale22 <- 
+  scores_instruction %>% 
+  group_by(STNAME) %>% 
+  summarize(
+    math = mean(mean_math_all, na.rm=TRUE),
+    instr = mean(instr_per_stu_k, na.rm=TRUE)
+  ) %>% 
+  bi_class(x = math, y = instr, style = "quantile", dim = 3)
+
+
+names(biscale22)[1]<-"full"
+map_join22<- biscale22%>%left_join(statepop, by= "full") 
+
+
+
+p33<-plot_usmap(data = map_join22, values = "bi_class", labels = TRUE, label_color = "black")   +
+  bi_scale_fill(pal = "DkCyan", dim = 3, guide = F) +
+  scale_x_continuous(breaks = NULL) + 
+  scale_y_continuous(breaks = NULL) +
+  theme(
+    plot.title = element_text(margin = margin(b = 8), 
+                              color = "#ffffff",face = "bold",size = 9,
+                              hjust = 0.5,
+                              family = "Arial"),
+    plot.subtitle = element_text(margin = margin(t=10,b = 25), 
+                                 color = "#ffffff", size = 6, family = "Arial",
+                                 hjust = 0.5),
+    plot.caption =  element_text(margin = margin(t = 20), 
+                                 color = "#ffffff", size = 5, family = "Arial",
+                                 hjust = 0.95),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    legend.title = element_blank(),
+    axis.text.x    = element_blank(),
+    axis.text.y    = element_blank(),
+    panel.background = element_blank(), 
+    panel.grid.major = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(), 
+    plot.background = element_rect(fill = "#f3f3f3", color = NA),
+    panel.border = element_blank(),
+    plot.margin = unit(c(1, 1, 1, 1), "cm"),
+    axis.ticks = element_blank()
+  ) 
+
+
+p33$layers[[2]]$aes_params$size <- 2.5
+
+legend_US33<- 
+  bi_legend(pal = "DkCyan",
+            dim = 3,
+            xlab = "Proficiency in Math",
+            ylab = "Instructional Spend",
+            size = 30) +
+  theme(rect = element_rect(fill = "grey10"),
+        panel.border = element_blank(),
+        axis.text = element_blank(),
+        plot.background = element_rect(fill = "#f3f3f3", color = NA),
+        axis.title.x = element_text(size = 12,
+                                    color = "grey20",
+                                    face = "bold"),
+        axis.title.y = element_text(size = 12,
+                                    color = "grey20",
+                                    face = "bold"),
+        legend.text = element_text(size = 5),
+        legend.text.align = 0)
+
+
+ggdraw() +
+  draw_plot(p33, 0, 0, 1, 1) +
+  draw_plot(legend_US33, 0, 0.1, 0.2, 0.3) +
+  draw_label("Source:National Center for Education Statistics)", 
+             color = "#a1a1a1", size = 7.5, angle = 0, x = 0.9, y = 0.05) +
+  draw_label("In which states the total spending on Instruction per student positively affects performance in Math?", 
+             color = "#000000", size = 17, angle = 0, x =0.5, y = 0.97, fontface = "bold") +
+  theme(plot.background = element_rect(fill = "#f3f3f3", color = NA)) 
+```
+#### Note: 
+The states mapped in gray did not have their spending data reported. 
+
+#### Findings: 
+We can observe the general tendency of positive correlation between Expenditure on Instruction and math and RLA proficiency. In New York,  Maryland, District of Columbia, and Connecticut increased spending on instruction results in both increased math and RLA scores. Similarly, increased spending in Nebraska and Pennsylvania correlates with increased math proficiency and average RLA scores, and in New Hampshire - with average math and increased RLA performance. Arizona, Oklahoma, New Mexico, Tennessee, Mississippi, report the lowest total spend on Instruction, which correlates with the relatively low demonstrated proficiency in both math and RLA by students of those states. 
+
+Interestingly, Texas, Colorado and Idaho that demonstrated the high RLA and math scores despite small total spending, exhibit the same pattern here: high math scores and high RLA scores despite low spending on Instruction. The experience of those states should be looked into in more detail to try to figure out what exactly is done differently in those states to have such amazing results. On the flip side, Maine again exhibits the opposite pattern: the high instructional spending negatively correlates with the students' math and RLA proficiency. Here (i.e., when accounting for instructional spending only), the same trend is observed in Minnesota and Hawaii with regards to both math and RLA scores. 
+::: 
+
+::: {.panel}
+
+## Spending on Special Education {.panel-name}
+
+
+The first bivariate map below is showing the combination of the total spending on special education per student and the average demonstrated proficiency of students with disabilities in Reading and Language Arts, while the second one - the correlation between the total spending on special education and the average math scores of students with disabilities. 
+
+```{r bi-SpEd, layout = "l-body-outset", fig.height = 8, fig.width = 12}
+biscale4 <- 
+  scores_SpEd %>% 
+  group_by(STNAME) %>% 
+  summarize(
+    rla = mean(mean_rla_dis, na.rm=TRUE),
+    SpEd = mean(SpEd_per_stu, na.rm=TRUE)
+  ) %>% 
+  bi_class(x = rla, y = SpEd, style = "quantile", dim = 3)
+
+
+names(biscale4)[1]<-"full"
+map_join4<- biscale4%>%left_join(statepop, by= "full") 
+
+
+p4<-plot_usmap(data = map_join4, values = "bi_class", labels = TRUE, label_color = "black")   +
+  bi_scale_fill(pal = "DkCyan", dim = 3, guide = F) +
+  scale_x_continuous(breaks = NULL) + 
+  scale_y_continuous(breaks = NULL) +
+  theme(
+    plot.title = element_text(margin = margin(b = 8), 
+                              color = "#ffffff",face = "bold",size = 9,
+                              hjust = 0.5,
+                              family = "Arial"),
+    plot.subtitle = element_text(margin = margin(t=10,b = 25), 
+                                 color = "#ffffff", size = 6, family = "Arial",
+                                 hjust = 0.5),
+    plot.caption =  element_text(margin = margin(t = 20), 
+                                 color = "#ffffff", size = 5, family = "Arial",
+                                 hjust = 0.95),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    legend.title = element_blank(),
+    axis.text.x    = element_blank(),
+    axis.text.y    = element_blank(),
+    panel.background = element_blank(), 
+    panel.grid.major = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(), 
+    plot.background = element_rect(fill = "#f3f3f3", color = NA),
+    panel.border = element_blank(),
+    plot.margin = unit(c(1, 1, 1, 1), "cm"),
+    axis.ticks = element_blank()
+  
+  ) 
+
+p4$layers[[2]]$aes_params$size <- 2.5
+
+legend_US4<- 
+  bi_legend(pal = "DkCyan",
+            dim = 3,
+            xlab = "Proficiency in RLA",
+            ylab = "Special Ed Spend",
+            size = 30) +
+  theme(rect = element_rect(fill = "grey10"),
+        panel.border = element_blank(),
+        axis.text = element_blank(),
+        plot.background = element_rect(fill = "#f3f3f3", color = NA),
+        axis.title.x = element_text(size = 12,
+                                    color = "#a1a1a1",
+                                    face = "bold"),
+        axis.title.y = element_text(size = 12,
+                                    color = "#a1a1a1",
+                                    face = "bold"),
+        legend.text = element_text(size = 5),
+        legend.text.align = 0)
+
+
+ggdraw() +
+  draw_plot(p4, 0, 0, 1, 1) +
+  draw_plot(legend_US4, 0, 0.1, 0.2, 0.3) +
+  draw_label("Source:National Center for Education Statistics)", 
+             color = "#a1a1a1", size = 7.5, angle = 0, x = 0.9, y = 0.05) +
+  draw_label("In which states the total spending on Special Edcuation positively affects performance of children with disabilities in RLA?", 
+             color = "#000000", size = 15, angle = 0, x =0.5, y = 0.97, fontface = "bold") +
+  theme(plot.background = element_rect(fill = "#f3f3f3", color = NA)) 
+
+biscale44 <- 
+  scores_SpEd %>% 
+  group_by(STNAME) %>% 
+  summarize(
+    math = mean(mean_math_dis, na.rm=TRUE),
+    SpEd = mean(Z36, na.rm=TRUE)
+  ) %>% 
+  bi_class(x = math, y = SpEd, style = "quantile", dim = 3)
+
+
+names(biscale44)[1]<-"full"
+map_join44<- biscale44%>%left_join(statepop, by= "full") 
+
+
+p44<-plot_usmap(data = map_join44, values = "bi_class", labels = TRUE, label_color = "black")   +
+  bi_scale_fill(pal = "DkCyan", dim = 3, guide = F) +
+  scale_x_continuous(breaks = NULL) + 
+  scale_y_continuous(breaks = NULL) +
+  theme(
+    plot.title = element_text(margin = margin(b = 8), 
+                              color = "#ffffff",face = "bold",size = 9,
+                              hjust = 0.5,
+                              family = "Arial"),
+    plot.subtitle = element_text(margin = margin(t=10,b = 25), 
+                                 color = "#ffffff", size = 6, family = "Arial",
+                                 hjust = 0.5),
+    plot.caption =  element_text(margin = margin(t = 20), 
+                                 color = "#ffffff", size = 5, family = "Arial",
+                                 hjust = 0.95),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    legend.title = element_blank(),
+    axis.text.x    = element_blank(),
+    axis.text.y    = element_blank(),
+    panel.background = element_blank(), 
+    panel.grid.major = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(), 
+    plot.background = element_rect(fill = "#f3f3f3", color = NA),
+    panel.border = element_blank(),
+    plot.margin = unit(c(1, 1, 1, 1), "cm"),
+    axis.ticks = element_blank()
+  
+  ) 
+
+p44$layers[[2]]$aes_params$size <- 2.5
+
+legend_US44<- 
+  bi_legend(pal = "DkCyan",
+            dim = 3,
+            xlab = "Proficiency in Math",
+            ylab = "Special Ed Spend",
+            size = 30) +
+  theme(rect = element_rect(fill = "grey10"),
+        panel.border = element_blank(),
+        axis.text = element_blank(),
+        plot.background = element_rect(fill = "#f3f3f3", color = NA),
+        axis.title.x = element_text(size = 12,
+                                    color = "#a1a1a1",
+                                    face = "bold"),
+        axis.title.y = element_text(size = 12,
+                                    color = "#a1a1a1",
+                                    face = "bold"),
+        legend.text = element_text(size = 5),
+        legend.text.align = 0)
+
+
+ggdraw() +
+  draw_plot(p44, 0, 0, 1, 1) +
+  draw_plot(legend_US44, 0, 0.1, 0.2, 0.3) +
+  draw_label("Source:National Center for Education Statistics)", 
+             color = "#a1a1a1", size = 7.5, angle = 0, x = 0.9, y = 0.05) +
+  draw_label("In which states the total spending on Special Edcuation positively affects performance of children with disabilities in Math?", 
+             color = "#000000", size = 15, angle = 0, x =0.5, y = 0.97, fontface = "bold") +
+  theme(plot.background = element_rect(fill = "#f3f3f3", color = NA)) 
+
+```
+#### Note: 
+The states mapped in gray did not have their spending data reported. 
+
+#### Findings: 
+The two plots compare the spending and the performance of only students with disabilities, so there it no need to compare with previous plots. The most interesting observation, in my opinion, is that there are no states that report higher than average spending on students with disabilities but where students demonstrate poor performance in math, and there is only one state, Vermont, that is among the higher spenders on special education but that also reports below average performance in RLA. It gives us ground to say, that increased spending on special education is never wasted and very often results in improved performance. 
+
+The second interesting observation, is that there are a lot more states that show correlation between increased spending on Special Ed and above average performance in math (e.g., New York, Pennsylvania, Virginia, North Carolina, Michigan. etc.), compared to the results of students with disabilities in RLA, and to results of analysis of other categories. This suggests that increased spending on special education boosts math performance of students with disabilities in particular. 
+::: 
+
+::: {.panel}
+
+## Spending on Textbooks {.panel-name}
+
+The first bivariate map below is showing the combination of the total spending on textbooks per student and the average demonstrated proficiency in Reading and Language Arts, while the second one - the correlation between the total spending on textbooks and the average math scores. 
+
+```{r map-books, layout = "l-body-outset", fig.height = 8, fig.width = 12}
+biscale4 <- 
+  scores_books %>% 
+  group_by(STNAME) %>% 
+  summarize(
+    rla = mean(mean_rla_dis, na.rm=TRUE),
+    books = mean(V93_M, na.rm=TRUE)
+  ) %>% 
+  bi_class(x = rla, y = books, style = "quantile", dim = 3)
+
+
+names(biscale4)[1]<-"full"
+map_join4<- biscale4%>%left_join(statepop, by= "full") 
+
+
+p4<-plot_usmap(data = map_join4, values = "bi_class", labels = TRUE, label_color = "black")   +
+  bi_scale_fill(pal = "DkCyan", dim = 3, guide = F) +
+  scale_x_continuous(breaks = NULL) + 
+  scale_y_continuous(breaks = NULL) +
+  theme(
+    plot.title = element_text(margin = margin(b = 8), 
+                              color = "#ffffff",face = "bold",size = 9,
+                              hjust = 0.5,
+                              family = "Arial"),
+    plot.subtitle = element_text(margin = margin(t=10,b = 25), 
+                                 color = "#ffffff", size = 6, family = "Arial",
+                                 hjust = 0.5),
+    plot.caption =  element_text(margin = margin(t = 20), 
+                                 color = "#ffffff", size = 5, family = "Arial",
+                                 hjust = 0.95),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    legend.title = element_blank(),
+    axis.text.x    = element_blank(),
+    axis.text.y    = element_blank(),
+    panel.background = element_blank(), 
+    panel.grid.major = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(), 
+    plot.background = element_rect(fill = "#f3f3f3", color = NA),
+    panel.border = element_blank(),
+    plot.margin = unit(c(1, 1, 1, 1), "cm"),
+    axis.ticks = element_blank()
+  
+  ) 
+
+p4$layers[[2]]$aes_params$size <- 2.5
+
+legend_US4<- 
+  bi_legend(pal = "DkCyan",
+            dim = 3,
+            xlab = "Proficiency in RLA",
+            ylab = "Textbooks Spend",
+            size = 30) +
+  theme(rect = element_rect(fill = "grey10"),
+        panel.border = element_blank(),
+        axis.text = element_blank(),
+        plot.background = element_rect(fill = "#f3f3f3", color = NA),
+        axis.title.x = element_text(size = 12,
+                                    color = "#a1a1a1",
+                                    face = "bold"),
+        axis.title.y = element_text(size = 12,
+                                    color = "#a1a1a1",
+                                    face = "bold"),
+        legend.text = element_text(size = 5),
+        legend.text.align = 0)
+
+
+ggdraw() +
+  draw_plot(p4, 0, 0, 1, 1) +
+  draw_plot(legend_US4, 0, 0.1, 0.2, 0.3) +
+  draw_label("Source:National Center for Education Statistics)", 
+             color = "#a1a1a1", size = 7.5, angle = 0, x = 0.9, y = 0.05) +
+  draw_label("In which states the total spending on Textbooks positively affects performance in RLA?", 
+             color = "#000000", size = 15, angle = 0, x =0.5, y = 0.97, fontface = "bold") +
+  theme(plot.background = element_rect(fill = "#f3f3f3", color = NA)) 
+
+biscale44 <- 
+  scores_books %>% 
+  group_by(STNAME) %>% 
+  summarize(
+    math = mean(mean_math_dis, na.rm=TRUE),
+    books = mean(V93_M, na.rm=TRUE)
+  ) %>% 
+  bi_class(x = math, y = books, style = "quantile", dim = 3)
+
+
+names(biscale44)[1]<-"full"
+map_join44<- biscale44%>%left_join(statepop, by= "full") 
+
+
+p44<-plot_usmap(data = map_join44, values = "bi_class", labels = TRUE, label_color = "black")   +
+  bi_scale_fill(pal = "DkCyan", dim = 3, guide = F) +
+  scale_x_continuous(breaks = NULL) + 
+  scale_y_continuous(breaks = NULL) +
+  theme(
+    plot.title = element_text(margin = margin(b = 8), 
+                              color = "#ffffff",face = "bold",size = 9,
+                              hjust = 0.5,
+                              family = "Arial"),
+    plot.subtitle = element_text(margin = margin(t=10,b = 25), 
+                                 color = "#ffffff", size = 6, family = "Arial",
+                                 hjust = 0.5),
+    plot.caption =  element_text(margin = margin(t = 20), 
+                                 color = "#ffffff", size = 5, family = "Arial",
+                                 hjust = 0.95),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    legend.title = element_blank(),
+    axis.text.x    = element_blank(),
+    axis.text.y    = element_blank(),
+    panel.background = element_blank(), 
+    panel.grid.major = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(), 
+    plot.background = element_rect(fill = "#f3f3f3", color = NA),
+    panel.border = element_blank(),
+    plot.margin = unit(c(1, 1, 1, 1), "cm"),
+    axis.ticks = element_blank()
+  
+  ) 
+
+p44$layers[[2]]$aes_params$size <- 2.5
+
+legend_US44<- 
+  bi_legend(pal = "DkCyan",
+            dim = 3,
+            xlab = "Proficiency in Math",
+            ylab = "Textbooks Spend",
+            size = 30) +
+  theme(rect = element_rect(fill = "grey10"),
+        panel.border = element_blank(),
+        axis.text = element_blank(),
+        plot.background = element_rect(fill = "#f3f3f3", color = NA),
+        axis.title.x = element_text(size = 12,
+                                    color = "#a1a1a1",
+                                    face = "bold"),
+        axis.title.y = element_text(size = 12,
+                                    color = "#a1a1a1",
+                                    face = "bold"),
+        legend.text = element_text(size = 5),
+        legend.text.align = 0)
+
+
+ggdraw() +
+  draw_plot(p44, 0, 0, 1, 1) +
+  draw_plot(legend_US44, 0, 0.1, 0.2, 0.3) +
+  draw_label("Source:National Center for Education Statistics)", 
+             color = "#a1a1a1", size = 7.5, angle = 0, x = 0.9, y = 0.05) +
+  draw_label("In which states the total spending on Textbooks positively affects performance in Math?", 
+             color = "#000000", size = 14, angle = 0, x =0.5, y = 0.97, fontface = "bold") +
+  theme(plot.background = element_rect(fill = "#f3f3f3", color = NA)) 
+```
+#### Note: 
+The states mapped in gray did not have their spending data reported. 
+
+#### Findings: 
+ The most interesting observation, in my opinion, is that there are states (e.g., Texas, Georgia, North Carolina, etc.)who were among "low spenders but high performers" in the previous analysis, but the increased spending on textbooks actually directly correlates with improved performance in both RLA and Math. It might suggests, that when everything else is controlled for, increased spending on textbooks might be that deciding factor that determines students performance. If that is indeed the case, it is very empowering, given how small the expenditure on textbook is compared to instruction, for example. no states that report higher than average spending on students with disabilities but where students demonstrate poor performance in math, and there is only one state, Vermont, that is among the higher spenders on special education but that also reports below average performance in RLA. It gives us ground to say, that increased spending on special education is never wasted and very often results in improved performance. 
+
+The second interesting observation, is that there are a lot more states that show correlation between increased spending on textbooks and above average performance in math (e.g., New York, Pennsylvania, Virginia, North Carolina, Michigan. etc.), compared to RLA scores. This matches the similar trend in Special education funding, where increase in spending affects performance in math more significantly compared to RLA. This may suggest that math performance might be more susceptible to changes in expenditure and depend on it to a certain extent, while performance on RLA is primarily determined by other factors, unrelated to expenditure. 
+::: 
+::: {.panel}
+## Code for the final plot {.panel-name}
+```{r ksenia-maps-code, fig.show='hide', echo=TRUE}
+#Plotting bivariate map to express relations between RLA score and total spending
+biscale2 <- 
+  scores_instruction %>% 
+  group_by(STNAME) %>% 
+  summarize(
+    rla = mean(mean_rla_all, na.rm=TRUE),
+    instr = mean(instr_per_stu_k, na.rm=TRUE)
+  ) %>% 
+  bi_class(x = rla, y = instr, style = "quantile", dim = 3)
+
+
+names(biscale2)[1]<-"full"
+map_join2<- biscale2%>%left_join(statepop, by= "full") 
+
+
+
+p3<-plot_usmap(data = map_join2, values = "bi_class", labels = TRUE, label_color = "black")   +
+  bi_scale_fill(pal = "DkCyan", dim = 3, guide = F) +
+  scale_x_continuous(breaks = NULL) + 
+  scale_y_continuous(breaks = NULL) +
+  theme(
+    plot.title = element_text(margin = margin(b = 8), 
+                              color = "#ffffff",face = "bold",size = 9,
+                              hjust = 0.5,
+                              family = "Arial"),
+    plot.subtitle = element_text(margin = margin(t=10,b = 25), 
+                                 color = "#ffffff", size = 6, family = "Arial",
+                                 hjust = 0.5),
+    plot.caption =  element_text(margin = margin(t = 20), 
+                                 color = "#ffffff", size = 5, family = "Arial",
+                                 hjust = 0.95),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    legend.title = element_blank(),
+    axis.text.x    = element_blank(),
+    axis.text.y    = element_blank(),
+    panel.background = element_blank(), 
+    panel.grid.major = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(), 
+    plot.background = element_rect(fill = "#f3f3f3", color = NA),
+    panel.border = element_blank(),
+    plot.margin = unit(c(1, 1, 1, 1), "cm"),
+    axis.ticks = element_blank()
+  ) 
+
+
+p3$layers[[2]]$aes_params$size <- 2.5
+
+legend_US3<- 
+  bi_legend(pal = "DkCyan",
+            dim = 3,
+            xlab = "Proficiency in RLA",
+            ylab = "Instructional Spend",
+            size = 30) +
+  theme(rect = element_rect(fill = "grey10"),
+        panel.border = element_blank(),
+        axis.text = element_blank(),
+        plot.background = element_rect(fill = "#f3f3f3", color = NA),
+        axis.title.x = element_text(size = 12,
+                                    color = "grey20",
+                                    face = "bold"),
+        axis.title.y = element_text(size = 12,
+                                    color = "grey20",
+                                    face = "bold"),
+        legend.text = element_text(size = 5),
+        legend.text.align = 0)
+
+
+ggdraw() +
+  draw_plot(p3, 0, 0, 1, 1) +
+  draw_plot(legend_US3, 0, 0.1, 0.2, 0.3) +
+  draw_label("Source:National Center for Education Statistics)", 
+             color = "#a1a1a1", size = 7.5, angle = 0, x = 0.9, y = 0.05) +
+  draw_label("In which states the total spending on Instruction per student positively affects performance in RLA?", 
+             color = "#000000", size = 15, angle = 0, x =0.5, y = 0.97, fontface = "bold") +
+  theme(plot.background = element_rect(fill = "#f3f3f3", color = NA)) 
+
+```
+:::
+
+:::::
+
+:::
+
+#### General Findings: 
+
+* Performance in math is suggested to be affected by changes in spending patterns more than RLA scores, that are most likely determined by other factors unrelated to funding
+* Spending on textbooks appears to have the biggest contribution to the student performance compared by other categories. 
+* While they are states where direct correlation patterns between spending and test scores are found, there are states (e.g., Texas, Idaho, Utah, Colorado)that report lower than average spending but better overall performance. It is suggested that those states' increased allocation on textbook may be the deciding factor. However, it is still crucial to study their experience in more detail to determine what are other factors that might positively affect test scores without spending increase
+* At the same time, the examples of states where the increased spending correlates with poor performance are very rare in all categories. That suggests that increased expenditure will very rarely have a negative effect on students' performance. 
+
+**Prior Versions** 
+
+:::l-body-outset
+
+::::: {.panelset}
+
+::: {.panel}
+
+## Prior Version 1 {.panel-name}
+
+```{r bi-prior1, layout = "l-body-outset"}
+biscale <- 
+  scores_spending %>% 
+  group_by(STNAME) %>% 
+  summarize(
+    rla = mean(mean_rla_all, na.rm=TRUE),
+    spend = mean(spend_per_stu_k, na.rm=TRUE)
+  ) %>% 
+  bi_class(x = rla, y = spend, style = "quantile", dim = 3)
+
+
+names(biscale)[1]<-"full"
+map_join<- biscale%>%left_join(statepop, by= "full") 
+
+
+p2<-plot_usmap(data = map_join, values = "bi_class", labels = TRUE, label_color = "white")   +
+  bi_scale_fill(pal = "DkCyan", dim = 3, guide = F) +
+  scale_x_continuous(breaks = NULL) + 
+  scale_y_continuous(breaks = NULL) +
+  theme(
+    plot.title = element_text(margin = margin(b = 8), 
+                              color = "#ffffff",face = "bold",size = 9,
+                              hjust = 0.5,
+                              family = "Arial"),
+    plot.subtitle = element_text(margin = margin(t=10,b = 25), 
+                                 color = "#ffffff", size = 6, family = "Arial",
+                                 hjust = 0.5),
+    plot.caption =  element_text(margin = margin(t = 20), 
+                                 color = "#ffffff", size = 5, family = "Arial",
+                                 hjust = 0.95),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    legend.title = element_blank(),
+    axis.text.x    = element_blank(),
+    axis.text.y    = element_blank(),
+    panel.background = element_blank(), 
+    panel.grid.major = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(), 
+    plot.background = element_rect(fill = "#f3f3f3", color = NA),
+    panel.border = element_blank(),
+    plot.margin = unit(c(1, 1, 1, 1), "cm"),
+    axis.ticks = element_blank()
+  ) 
+
+legend_US<- 
+  bi_legend(pal = "DkCyan",
+            dim = 3,
+            xlab = "Proficiency in RLA",
+            ylab = "Spend total",
+            size = 20) +
+  theme(rect = element_rect(fill = "grey10"),
+        panel.border = element_blank(),
+        axis.text = element_blank(),
+        plot.background = element_rect(fill = "#f3f3f3", color = NA),
+        axis.title.x = element_text(size = 10,
+                                    color = "#a1a1a1",
+                                    face = "bold"),
+        axis.title.y = element_text(size = 10,
+                                    color = "#a1a1a1",
+                                    face = "bold"),
+        legend.text = element_text(size = 5),
+        legend.text.align = 0)
+
+
+ggdraw() +
+  draw_plot(p2, 0, 0, 1, 1) +
+  draw_plot(legend_US, 0, 0.1, 0.2, 0.2) +
+  draw_label("Source:National Center for Education Statistics)", 
+             color = "#a1a1a1", size = 7.5, angle = 0, x = 0.9, y = 0.05) +
+  draw_label("In which states the total spending on Education per student positively affects the average performance in RLA?", 
+             color = "#000000", size = 17, angle = 0, x =0.5, y = 0.97, fontface = "bold") +
+  draw_label("Bivariate map shwoing the combination of the total spending on education per student and the average demonstrated proficiency in Reading and Langguage Arts", 
+             color = "#000000", size = 14, angle = 0, x =0.5, y = 0.92) +
+  theme(plot.background = element_rect(fill = "#f3f3f3", color = NA)) 
+
+```
+The first version of the bivariate map visualization features lables of states in default sizing, that I ended up changing, specifically to have the Northeast region look neater. The labels were also in white color, while I opted for black. This plot also shows the original versions of the legend, title and subtitle, which I cleaned up in the final version.
+
+:::
+
+::: {.panel}
+## Prior Version 2 {.panel-name}
+```{r map-prior2, layout = "l-body-outset", fig.height = 10, fig.width = 10}
+biscale_p <- 
+  scores_spending %>% 
+  group_by(STNAME) %>% 
+  summarize(
+    rla = mean(mean_rla_all, na.rm=TRUE),
+    spend = mean(spend_per_stu_k, na.rm=TRUE)
+  ) %>% 
+  bi_class(x = rla, y = spend, style = "quantile", dim = 2)
+
+
+names(biscale_p)[1]<-"full"
+map_join_p<- biscale_p%>%left_join(statepop, by= "full") 
+
+
+p2p<-plot_usmap(data = map_join_p, values = "bi_class", labels = TRUE, label_color = "white")   +
+  bi_scale_fill(pal = "DkCyan", dim = 2, guide = F) +
+  scale_x_continuous(breaks = NULL) + 
+  scale_y_continuous(breaks = NULL) +
+  theme(
+    plot.title = element_text(margin = margin(b = 8), 
+                              color = "#ffffff",face = "bold",size = 9,
+                              hjust = 0.5,
+                              family = "Arial"),
+    plot.subtitle = element_text(margin = margin(t=10,b = 25), 
+                                 color = "#ffffff", size = 6, family = "Arial",
+                                 hjust = 0.5),
+    plot.caption =  element_text(margin = margin(t = 20), 
+                                 color = "#ffffff", size = 5, family = "Arial",
+                                 hjust = 0.95),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    legend.title = element_blank(),
+    axis.text.x    = element_blank(),
+    axis.text.y    = element_blank(),
+    panel.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(), 
+    plot.background = element_rect(fill = "#f3f3f3", color = NA),
+    panel.border = element_blank(),
+    plot.margin = unit(c(1, 1, 1, 1), "cm"),
+    axis.ticks = element_blank(),
+  ) 
+
+p2$layers[[2]]$aes_params$size <- 2.5
+
+legend_US_p<- 
+  bi_legend(pal = "DkCyan",
+            dim = 2,
+            xlab = "Proficiency in RLA",
+            ylab = "Spend total",
+            size = 30) +
+  theme(rect = element_rect(fill = "grey10"),
+        panel.border = element_blank(),
+        axis.text = element_blank(),
+        plot.background = element_rect(fill = "#f3f3f3", color = NA),
+        axis.title.x = element_text(size = 12,
+                                    color = "grey20",
+                                    face = "bold"),
+        axis.title.y = element_text(size = 12,
+                                    color = "grey20",
+                                    face = "bold"),
+        legend.text = element_text(size = 5),
+        legend.text.align = 0)
+
+
+ggdraw() +
+  draw_plot(p2p, 0, 0, 1, 1) +
+  draw_plot(legend_US_p, 0, 0.1, 0.2, 0.3) +
+  draw_label("Source:National Center for Education Statistics)", 
+             color = "#a1a1a1", size = 7.5, angle = 0, x = 0.9, y = 0.05) +
+  draw_label("In which states the total spending on Education per student positively affects the average performance in RLA?", 
+             color = "#000000", size = 17, angle = 0, x =0.5, y = 0.97, fontface = "bold") +
+  draw_label("Bivariate map showing the combination of the total spending on education per student and the average demonstrated proficiency in Reading and Langguage Arts", 
+             color = "#000000", size = 14, angle = 0, x =0.5, y = 0.92) +
+  theme(plot.background = element_rect(fill = "#f3f3f3", color = NA)) 
+```
+This plot utilizes 2 dimensions to represent two variables instead of 3. I opted to have 3 dimensions to show more nuanced details, which should be of interest to policy makers (my intended audience). However, since we are interested in the extremes anyway (groups like 'highest spending-poor performance', 'highest spending-best performance'), they are visible in the 2-dimensional map anyway. And even though with the expense of certain nuances, the 2-dimensional version is easier to interpret. Thus, even though I chose to use a 3-dimensional scale, I would recommend to use a 2-dimensional one if presented to the general public.
+:::
+
+::: {.panel}
+## Prior Version 3 {.panel-name}
+```{r bi-prior3, layout = "l-body-outset", fig.height = 10, fig.width = 10}
+biscale2 <- 
+  scores_instruction %>% 
+  group_by(STNAME) %>% 
+  summarize(
+    rla = mean(mean_rla_all, na.rm=TRUE),
+    instr = mean(instr_per_stu_k, na.rm=TRUE)
+  ) %>% 
+  bi_class(x = rla, y = instr, style = "quantile", dim = 3)
+
+
+names(biscale2)[1]<-"full"
+map_join2<- biscale2%>%left_join(statepop, by= "full") 
+
+
+
+p3<-plot_usmap(data = map_join2, values = "bi_class", labels = TRUE, label_color = "black")   +
+  bi_scale_fill(pal = "DkBlue", dim = 3, guide = F) +
+  scale_x_continuous(breaks = NULL) + 
+  scale_y_continuous(breaks = NULL) +
+  theme(
+    plot.title = element_text(margin = margin(b = 8), 
+                              color = "#ffffff",face = "bold",size = 9,
+                              hjust = 0.5,
+                              family = "Arial"),
+    plot.subtitle = element_text(margin = margin(t=10,b = 25), 
+                                 color = "#ffffff", size = 6, family = "Arial",
+                                 hjust = 0.5),
+    plot.caption =  element_text(margin = margin(t = 20), 
+                                 color = "#ffffff", size = 5, family = "Arial",
+                                 hjust = 0.95),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    legend.title = element_blank(),
+    axis.text.x    = element_blank(),
+    axis.text.y    = element_blank(),
+    panel.background = element_blank(), 
+    panel.grid.major = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(), 
+    plot.background = element_rect(fill = "#f3f3f3", color = NA),
+    panel.border = element_blank(),
+    plot.margin = unit(c(1, 1, 1, 1), "cm"),
+    axis.ticks = element_blank()
+  ) 
+
+
+p3$layers[[2]]$aes_params$size <- 2.5
+
+legend_US3<- 
+  bi_legend(pal = "DkBlue",
+            dim = 3,
+            xlab = "Proficiency in RLA",
+            ylab = "Instructional Spend",
+            size = 30) +
+  theme(rect = element_rect(fill = "grey10"),
+        panel.border = element_blank(),
+        axis.text = element_blank(),
+        plot.background = element_rect(fill = "#f3f3f3", color = NA),
+        axis.title.x = element_text(size = 12,
+                                    color = "grey20",
+                                    face = "bold"),
+        axis.title.y = element_text(size = 12,
+                                    color = "grey20",
+                                    face = "bold"),
+        legend.text = element_text(size = 5),
+        legend.text.align = 0)
+
+
+ggdraw() +
+  draw_plot(p3, 0, 0, 1, 1) +
+  draw_plot(legend_US3, 0, 0.1, 0.2, 0.3) +
+  draw_label("Source:National Center for Education Statistics)", 
+             color = "#a1a1a1", size = 7.5, angle = 0, x = 0.9, y = 0.05) +
+  draw_label("In which states the total spending on Instruction per student positively affects performance in RLA?", 
+             color = "#000000", size = 15, angle = 0, x =0.5, y = 0.97, fontface = "bold") +
+  theme(plot.background = element_rect(fill = "#f3f3f3", color = NA)) 
+
+```
+In an attempt to find the optimal palette that would make the interpretation of a 3-dimensional bivariate plot easier, I tried several other palettes. Here is the version with *DkBlue* palette, which ended being not color-blind friendly.
+
+:::
+
+::: {.panel}
+## Prior Version 4 {.panel-name}
+```{r bi-prior4, layout = "l-body-outset", fig.height = 10, fig.width = 10}
+biscale2 <- 
+  scores_instruction %>% 
+  group_by(STNAME) %>% 
+  summarize(
+    rla = mean(mean_rla_all, na.rm=TRUE),
+    instr = mean(instr_per_stu_k, na.rm=TRUE)
+  ) %>% 
+  bi_class(x = rla, y = instr, style = "quantile", dim = 3)
+
+
+names(biscale2)[1]<-"full"
+map_join2<- biscale2%>%left_join(statepop, by= "full") 
+
+
+
+p3<-plot_usmap(data = map_join2, values = "bi_class", labels = TRUE, label_color = "black")   +
+  bi_scale_fill(pal = "DkViolet", dim = 3, guide = F) +
+  scale_x_continuous(breaks = NULL) + 
+  scale_y_continuous(breaks = NULL) +
+  theme(
+    plot.title = element_text(margin = margin(b = 8), 
+                              color = "#ffffff",face = "bold",size = 9,
+                              hjust = 0.5,
+                              family = "Arial"),
+    plot.subtitle = element_text(margin = margin(t=10,b = 25), 
+                                 color = "#ffffff", size = 6, family = "Arial",
+                                 hjust = 0.5),
+    plot.caption =  element_text(margin = margin(t = 20), 
+                                 color = "#ffffff", size = 5, family = "Arial",
+                                 hjust = 0.95),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    legend.title = element_blank(),
+    axis.text.x    = element_blank(),
+    axis.text.y    = element_blank(),
+    panel.background = element_blank(), 
+    panel.grid.major = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(), 
+    plot.background = element_rect(fill = "#f3f3f3", color = NA),
+    panel.border = element_blank(),
+    plot.margin = unit(c(1, 1, 1, 1), "cm"),
+    axis.ticks = element_blank()
+  ) 
+
+
+p3$layers[[2]]$aes_params$size <- 2.5
+
+legend_US3<- 
+  bi_legend(pal = "DkViolet",
+            dim = 3,
+            xlab = "Proficiency in RLA",
+            ylab = "Instructional Spend",
+            size = 30) +
+  theme(rect = element_rect(fill = "grey10"),
+        panel.border = element_blank(),
+        axis.text = element_blank(),
+        plot.background = element_rect(fill = "#f3f3f3", color = NA),
+        axis.title.x = element_text(size = 12,
+                                    color = "grey20",
+                                    face = "bold"),
+        axis.title.y = element_text(size = 12,
+                                    color = "grey20",
+                                    face = "bold"),
+        legend.text = element_text(size = 5),
+        legend.text.align = 0)
+
+
+ggdraw() +
+  draw_plot(p3, 0, 0, 1, 1) +
+  draw_plot(legend_US3, 0, 0.1, 0.2, 0.3) +
+  draw_label("Source:National Center for Education Statistics)", 
+             color = "#a1a1a1", size = 7.5, angle = 0, x = 0.9, y = 0.05) +
+  draw_label("In which states the total spending on Instruction per student positively affects performance in RLA?", 
+             color = "#000000", size = 15, angle = 0, x =0.5, y = 0.97, fontface = "bold") +
+  theme(plot.background = element_rect(fill = "#f3f3f3", color = NA)) 
+
+```
+This version is rendered with the use of *DkViolet* palette. Unlike *DkBlue* it was suitable for all types of color-blindness, but I made a decision to not use because it is too close to those palettes used for political outcomes in the US for my liking. 
+:::
+
+:::::
+
+:::
+
